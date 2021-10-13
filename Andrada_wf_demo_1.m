@@ -5,6 +5,12 @@
 % https://github.com/cortex-lab/widefield
 % https://github.com/kwikteam/npy-matlab
 
+% Do I do this??
+addpath(genpath(cd));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
+
 %% Load example dataset 
 
 % Here's an example animal/day
@@ -52,6 +58,30 @@ ylabel('Photodiode (volts)');
 % 'rewardEcho' signal turned on. That's been done in the load script, so
 % compare your answer with 'reward_t_timeline'
 
+reward_index = strcmp({Timeline.hw.inputs.name}, 'rewardEcho');
+reward_data = Timeline.rawDAQData(:,reward_index);
+reward = [];
+for idx = 1:length(reward_data)
+    if reward_data(idx) >= reward_thresh
+        if idx==1
+            reward = [reward idx];
+        elseif reward_data(idx-1) < reward_thresh
+            reward = [reward idx];
+        end
+    end
+end
+reward_times = Timeline.rawDAQTimestamps(reward);
+
+% check 
+length(reward_times == reward_t_timeline) == length(reward_t_timeline)
+
+% plot
+figure;
+plot(Timeline.rawDAQTimestamps,reward_data);
+hold on 
+plot(reward_times,reward_data(reward),'*')
+xlabel('Time (s)');
+ylabel('Reward');
 
 %% Signals introduction
 % Signals is the code environment for our experiment protocols
@@ -70,11 +100,45 @@ ylabel('Photodiode (volts)');
 signals_events.trialSideValues; % (-1 is on the left, 1 is on the right)
 % The contrast of the stim on each trial
 signals_events.trialContrastValues;
-% Correct (hit) or incorrect (miss) for each trial:
+% Correct (hit) = 1 or incorrect (miss) = 0 for each trial:
 signals_events.hitValues;
 
 % EXERCISE: using the above signals, make a plot showing the fraction of
 % correct trials for each unique stimulus (side and contrast).
+
+correct_index = find(signals_events.hitValues==1);
+ 
+possible_contrasts = unique(signals_events.trialContrastValues);
+possible_stimuli = [-1;1].*possible_contrasts;
+possible_stimuli = unique(reshape(possible_stimuli, [1, 2*size(possible_stimuli,2)]));
+
+fractions = zeros(1,length(possible_stimuli));
+left = -1;
+right = 1;
+for contrast = possible_contrasts
+    contrast_index = find(signals_events.trialContrastValues==contrast);
+    % left and this contrast
+    current_correct = [];
+    left_index = find(signals_events.trialSideValues(contrast_index)== left);
+    current_correct = cell2mat(arrayfun( @(X) left_index==X, correct_index,'UniformOutput',0));
+    this_fraction = sum(current_correct)/length(left_index);
+    fractions(find(possible_stimuli==contrast*left)) = this_fraction
+    
+    % right and this contrast
+    if contrast~=0
+        current_correct = [];
+        right_index = find(signals_events.trialSideValues(contrast_index)== right);
+        current_correct = cell2mat(arrayfun( @(X) correct_index==X, right_index,'UniformOutput',0));
+        this_fraction = sum(current_correct)/length(right_index);
+        fractions(find(possible_stimuli==contrast*right)) = this_fraction
+    end
+end
+
+% doesn't look right?
+plot(possible_stimuli, fractions)
+xlabel('Possible stimuli')
+ylabel('Fractions')
+
 
 
 %% Widefield data introduction
@@ -158,6 +222,26 @@ title('Average fluoresence');
 % fluorescence -1:1 second around rewards. You found the reward times
 % above, and since this is averaging you can do it in V-space before
 % reconstructing into pixel space.
+
+% get all start and end indexes for the window
+start_indices = [];
+end_indices = [];
+for i = reward_times
+    start_indices = [start_indices find(frame_t>=i-1,1,'first')];
+    end_indices = [end_indices find(frame_t>=i+1,1,'first')];
+end
+
+% how many frames here
+nframes = length(start_indices(1):end_indices(1));
+
+% get the matrix of activity and average across how many indices
+interval_act = cell2mat(arrayfun (@(X) fVdf(:,start_indices(X):end_indices(X)), [1:length(start_indices)], 'UniformOutput', 0));
+interval_act = reshape(interval_act(:), size(fVdf,1), nframes, length(start_indices));
+interval_avg_V = nanmean(interval_act,3);
+interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,interval_avg_V);
+
+AP_image_scroll(interval_avg_fluorescence);
+axis image;
 
 
 
