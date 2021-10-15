@@ -60,20 +60,13 @@ ylabel('Photodiode (volts)');
 
 reward_index = strcmp({Timeline.hw.inputs.name}, 'rewardEcho');
 reward_data = Timeline.rawDAQData(:,reward_index);
-reward = [];
-for idx = 1:length(reward_data)
-    if reward_data(idx) >= reward_thresh
-        if idx==1
-            reward = [reward idx];
-        elseif reward_data(idx-1) < reward_thresh
-            reward = [reward idx];
-        end
-    end
-end
-reward_times = Timeline.rawDAQTimestamps(reward);
+reward_der = [0; diff(reward_data>reward_thresh)];
+reward_times = Timeline.rawDAQTimestamps(find(reward_der==1));
+
+plot(reward_times-reward_t_timeline)
 
 % check 
-length(reward_times == reward_t_timeline) == length(reward_t_timeline)
+all(reward_times == reward_t_timeline)
 
 % plot
 figure;
@@ -110,7 +103,7 @@ correct_index = find(signals_events.hitValues==1);
  
 possible_contrasts = unique(signals_events.trialContrastValues);
 possible_stimuli = [-1;1].*possible_contrasts;
-possible_stimuli = unique(reshape(possible_stimuli, [1, 2*size(possible_stimuli,2)]));
+possible_stimuli = unique(possible_stimuli);
 
 fractions = zeros(1,length(possible_stimuli));
 left = -1;
@@ -120,7 +113,7 @@ for contrast = possible_contrasts
     % left and this contrast
     current_correct = [];
     left_index = find(signals_events.trialSideValues(contrast_index)== left);
-    current_correct = cell2mat(arrayfun( @(X) left_index==X, correct_index,'UniformOutput',0));
+    current_correct = cell2mat(arrayfun( @(X) left_index==X, correct_index,'Uni',0)); % no arrayfun - accumarray, grpstats
     this_fraction = sum(current_correct)/length(left_index);
     fractions(find(possible_stimuli==contrast*left)) = this_fraction
     
@@ -139,6 +132,8 @@ plot(possible_stimuli, fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
 
+% Plot psychometric curve
+% way it turned from hit/miss and left/right stimulus (do left or right turn) vs stimulus
 
 
 %% Widefield data introduction
@@ -242,6 +237,12 @@ interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,interval_avg_V);
 
 AP_image_scroll(interval_avg_fluorescence);
 axis image;
+
+
+% Baseline-subtract the triggered average movie
+% Make a triggered average for all stimuli
+stimOn_times
+
 
 
 
