@@ -69,12 +69,12 @@ plot(reward_times-reward_t_timeline)
 all(reward_times == reward_t_timeline)
 
 % plot
-figure;
-plot(Timeline.rawDAQTimestamps,reward_data);
-hold on 
-plot(reward_times,reward_data(reward),'*')
-xlabel('Time (s)');
-ylabel('Reward');
+% figure;
+% plot(Timeline.rawDAQTimestamps,reward_data);
+% hold on 
+% plot(reward_times,reward_data(reward),'*')
+% xlabel('Time (s)');
+% ylabel('Reward');
 
 %% Signals introduction
 % Signals is the code environment for our experiment protocols
@@ -110,30 +110,49 @@ left = -1;
 right = 1;
 for contrast = possible_contrasts
     contrast_index = find(signals_events.trialContrastValues==contrast);
-    % left and this contrast
-    current_correct = [];
-    left_index = find(signals_events.trialSideValues(contrast_index)== left);
-    current_correct = cell2mat(arrayfun( @(X) left_index==X, correct_index,'Uni',0)); % no arrayfun - accumarray, grpstats
-    this_fraction = sum(current_correct)/length(left_index);
-    fractions(find(possible_stimuli==contrast*left)) = this_fraction
-    
-    % right and this contrast
+    which_index = ones(1,length(contrast_index));
+    which_index(find(signals_events.trialSideValues(contrast_index)== right)) = 2;
+    sum_stimulus = accumarray(which_index',signals_events.hitValues(contrast_index)');
+    number_stimulus = accumarray(which_index',1);
+    fractions(find(possible_stimuli==contrast*left)) = sum_stimulus(1)/number_stimulus(1);
     if contrast~=0
-        current_correct = [];
-        right_index = find(signals_events.trialSideValues(contrast_index)== right);
-        current_correct = cell2mat(arrayfun( @(X) correct_index==X, right_index,'UniformOutput',0));
-        this_fraction = sum(current_correct)/length(right_index);
-        fractions(find(possible_stimuli==contrast*right)) = this_fraction
+        fractions(find(possible_stimuli==contrast*right)) = sum_stimulus(2)/number_stimulus(2);
     end
 end
 
-% doesn't look right?
+% still doesn't look right?
 plot(possible_stimuli, fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
 
-% Plot psychometric curve
+% Plot psychometric curve - didn't do the right thing try again!!
 % way it turned from hit/miss and left/right stimulus (do left or right turn) vs stimulus
+
+turnValues = signals_events.trialSideValues;
+turnValues(correct_index)= -signals_events.trialSideValues(correct_index);
+
+fractions = zeros(1,length(possible_stimuli));
+left = -1;
+right = 1;
+for contrast = possible_contrasts
+    contrast_index = find(signals_events.trialContrastValues==contrast);
+    which_index = ones(1,length(contrast_index));
+    which_index(find(turnValues(contrast_index)== right)) = 2;
+    sum_stimulus = accumarray(which_index',signals_events.hitValues(contrast_index)');
+    number_stimulus = accumarray(which_index',1);
+    fractions(find(possible_stimuli==contrast*left)) = sum_stimulus(1)/number_stimulus(1);
+    if contrast~=0
+        fractions(find(possible_stimuli==contrast*right)) = sum_stimulus(2)/number_stimulus(2);
+    end
+end
+
+% still doesn't look right?
+plot(possible_stimuli, fractions)
+xlabel('Possible stimuli')
+ylabel('Fractions')
+
+
+ 
 
 
 %% Widefield data introduction
@@ -233,6 +252,7 @@ nframes = length(start_indices(1):end_indices(1));
 interval_act = cell2mat(arrayfun (@(X) fVdf(:,start_indices(X):end_indices(X)), [1:length(start_indices)], 'UniformOutput', 0));
 interval_act = reshape(interval_act(:), size(fVdf,1), nframes, length(start_indices));
 interval_avg_V = nanmean(interval_act,3);
+interval_avg_V = interval_avg_V - interval_avg_V(:,1); % not sure who baseline is - just assumed it's the first
 interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,interval_avg_V);
 
 AP_image_scroll(interval_avg_fluorescence);
@@ -240,6 +260,7 @@ axis image;
 
 
 % Baseline-subtract the triggered average movie
+
 % Make a triggered average for all stimuli
 stimOn_times
 
