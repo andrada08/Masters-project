@@ -105,7 +105,7 @@ possible_contrasts = unique(signals_events.trialContrastValues);
 possible_stimuli = [-1;1].*possible_contrasts;
 possible_stimuli = unique(possible_stimuli);
 
-fractions = zeros(1,length(possible_stimuli));
+correct_fractions = zeros(1,length(possible_stimuli));
 left = -1;
 right = 1;
 for contrast = possible_contrasts
@@ -114,40 +114,41 @@ for contrast = possible_contrasts
     which_index(find(signals_events.trialSideValues(contrast_index)== right)) = 2;
     sum_stimulus = accumarray(which_index',signals_events.hitValues(contrast_index)');
     number_stimulus = accumarray(which_index',1);
-    fractions(find(possible_stimuli==contrast*left)) = sum_stimulus(1)/number_stimulus(1);
+    correct_fractions(find(possible_stimuli==contrast*left)) = sum_stimulus(1)/number_stimulus(1);
     if contrast~=0
-        fractions(find(possible_stimuli==contrast*right)) = sum_stimulus(2)/number_stimulus(2);
+        correct_fractions(find(possible_stimuli==contrast*right)) = sum_stimulus(2)/number_stimulus(2);
     end
 end
 
-% still doesn't look right?
-plot(possible_stimuli, fractions)
+% still doesn't look right? why??
+plot(possible_stimuli, correct_fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
 
-% Plot psychometric curve - didn't do the right thing try again!!
+% Plot psychometric curve 
 % way it turned from hit/miss and left/right stimulus (do left or right turn) vs stimulus
 
 turnValues = signals_events.trialSideValues;
 turnValues(correct_index)= -signals_events.trialSideValues(correct_index);
+tmp_turnValues = turnValues - ones(1,length(turnValues));
 
-fractions = zeros(1,length(possible_stimuli));
+left_turn_fractions = zeros(1,length(possible_stimuli));
 left = -1;
 right = 1;
 for contrast = possible_contrasts
     contrast_index = find(signals_events.trialContrastValues==contrast);
     which_index = ones(1,length(contrast_index));
-    which_index(find(turnValues(contrast_index)== right)) = 2;
-    sum_stimulus = accumarray(which_index',signals_events.hitValues(contrast_index)');
+    which_index(find(signals_events.trialSideValues(contrast_index)== right)) = 2;
+    sum_stimulus = accumarray(which_index',tmp_turnValues(contrast_index)');
     number_stimulus = accumarray(which_index',1);
-    fractions(find(possible_stimuli==contrast*left)) = sum_stimulus(1)/number_stimulus(1);
+    left_turn_fractions(find(possible_stimuli==contrast*left)) = -sum_stimulus(1)/2/number_stimulus(1);
     if contrast~=0
-        fractions(find(possible_stimuli==contrast*right)) = sum_stimulus(2)/number_stimulus(2);
+        left_turn_fractions(find(possible_stimuli==contrast*right)) = -sum_stimulus(2)/2/number_stimulus(2);
     end
 end
 
-% still doesn't look right?
-plot(possible_stimuli, fractions)
+% still doesn't look right? why??
+plot(possible_stimuli, left_turn_fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
 
@@ -237,34 +238,60 @@ title('Average fluoresence');
 % above, and since this is averaging you can do it in V-space before
 % reconstructing into pixel space.
 
+% Baseline-subtract the triggered average movie
+
 % get all start and end indexes for the window
 start_indices = [];
+reward_indices = [];
 end_indices = [];
 for i = reward_times
     start_indices = [start_indices find(frame_t>=i-1,1,'first')];
+    reward_indices = [reward_indices find(frame_t>=i,1,'first')];
     end_indices = [end_indices find(frame_t>=i+1,1,'first')];
 end
 
 % how many frames here
 nframes = length(start_indices(1):end_indices(1));
+reward_baseline_index = reward_indices(1)-start_indices(1)+1;
 
 % get the matrix of activity and average across how many indices
-interval_act = cell2mat(arrayfun (@(X) fVdf(:,start_indices(X):end_indices(X)), [1:length(start_indices)], 'UniformOutput', 0));
-interval_act = reshape(interval_act(:), size(fVdf,1), nframes, length(start_indices));
-interval_avg_V = nanmean(interval_act,3);
-interval_avg_V = interval_avg_V - interval_avg_V(:,1); % not sure who baseline is - just assumed it's the first
-interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,interval_avg_V);
+reward_interval_act = cell2mat(arrayfun (@(X) fVdf(:,start_indices(X):end_indices(X)), [1:length(start_indices)], 'UniformOutput', 0));
+reward_interval_act = reshape(reward_interval_act(:), size(fVdf,1), nframes, length(start_indices));
+reward_interval_avg_V = nanmean(reward_interval_act,3);
+reward_baseline = stimulus_interval_avg_V(:,reward_baseline_index);
+reward_interval_avg_V = reward_interval_avg_V - reward_baseline; 
+reward_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,reward_interval_avg_V);
 
-AP_image_scroll(interval_avg_fluorescence);
+AP_image_scroll(reward_interval_avg_fluorescence);
 axis image;
 
 
-% Baseline-subtract the triggered average movie
-
 % Make a triggered average for all stimuli
-stimOn_times
 
+% get all start and end indexes for the window
+start_indices = [];
+stimulus_indices = [];
+end_indices = [];
+for i = stimOn_times'
+    start_indices = [start_indices find(frame_t>=i-1,1,'first')];
+    stimulus_indices = [stimulus_indices find(frame_t>=i,1,'first')];
+    end_indices = [end_indices find(frame_t>=i+1,1,'first')];
+end
 
+% how many frames here
+nframes = length(start_indices(1):end_indices(1));
+stimulus_baseline_index = stimulus_indices(1)-start_indices(1)+1;
+
+% get the matrix of activity and average across how many indices
+stimulus_interval_act = cell2mat(arrayfun (@(X) fVdf(:,start_indices(X):end_indices(X)), [1:length(start_indices)], 'UniformOutput', 0));
+stimulus_interval_act = reshape(stimulus_interval_act(:), size(fVdf,1), nframes, length(start_indices));
+stimulus_interval_avg_V = nanmean(stimulus_interval_act,3);
+stimulus_baseline = stimulus_interval_avg_V(:,stimulus_baseline_index);
+stimulus_interval_avg_V = stimulus_interval_avg_V - stimulus_baseline; 
+stimulus_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,stimulus_interval_avg_V);
+
+AP_image_scroll(stimulus_interval_avg_fluorescence);
+axis image;
 
 
 
