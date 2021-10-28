@@ -130,31 +130,20 @@ ylabel('Fractions')
 
 turnValues = signals_events.trialSideValues;
 turnValues(correct_index)= -signals_events.trialSideValues(correct_index);
-tmp_turnValues = turnValues - ones(1,length(turnValues));
+left_turnValues = turnValues == -1;
 
-left_turn_fractions = zeros(1,length(possible_stimuli));
-left = -1;
-right = 1;
-for contrast = possible_contrasts
-    contrast_index = find(signals_events.trialContrastValues==contrast);
-    which_index = ones(1,length(contrast_index));
-    which_index(find(signals_events.trialSideValues(contrast_index)== right)) = 2;
-    sum_stimulus = accumarray(which_index',tmp_turnValues(contrast_index)');
-    number_stimulus = accumarray(which_index',1);
-    left_turn_fractions(find(possible_stimuli==contrast*left)) = -sum_stimulus(1)/2/number_stimulus(1);
-    if contrast~=0
-        left_turn_fractions(find(possible_stimuli==contrast*right)) = -sum_stimulus(2)/2/number_stimulus(2);
-    end
-end
+
+trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialSideValues;
+[left_turn_fractions, stimuli] = grpstats(left_turnValues, trialStimulusValue, {'mean', 'gname'});
+new_stimuli = cellfun(@str2num, stimuli);
+
 
 % still doesn't look right? why??
-plot(possible_stimuli, left_turn_fractions)
+plot(new_stimuli, left_turn_fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
-
-
  
-
+% use accumarray once + unique functions second output to do psychometric curve
 
 %% Widefield data introduction
 % Widefield data is saved in SVD format rather than in pixels because it
@@ -258,7 +247,7 @@ reward_baseline_index = reward_indices(1)-start_indices(1)+1;
 reward_interval_act = cell2mat(arrayfun (@(X) fVdf(:,start_indices(X):end_indices(X)), [1:length(start_indices)], 'UniformOutput', 0));
 reward_interval_act = reshape(reward_interval_act(:), size(fVdf,1), nframes, length(start_indices));
 reward_interval_avg_V = nanmean(reward_interval_act,3);
-reward_baseline = stimulus_interval_avg_V(:,reward_baseline_index);
+reward_baseline = reward_interval_avg_V(:,reward_baseline_index);
 reward_interval_avg_V = reward_interval_avg_V - reward_baseline; 
 reward_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,reward_interval_avg_V);
 
@@ -294,7 +283,12 @@ AP_image_scroll(stimulus_interval_avg_fluorescence);
 axis image;
 
 
+% split by stimuli 
 
+% interp1 function and sampling rate is 35Hz but change timesteps to see
+% what happens - timevec with timesteps in it for 1 second around stimulus
+% onset and then use function and then can put a 3D matrix into the scroll
+% thing!!!!
 
 
 
