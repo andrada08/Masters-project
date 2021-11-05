@@ -281,18 +281,29 @@ timevec = [-1:timestep:1];
 
 time_stimulus = stimOn_times+timevec;
  
-all_stimuli_act = interp1(frame_t,fVdf',time_stimulus);
+all_stim_act = interp1(frame_t,fVdf',time_stimulus);
+all_stim_act = permute(all_stim_act, [3,2,1]);
 
-avg_check = permute(nanmean(all_stimuli_act,1), [3, 2, 1]);
-fluorescence_check = AP_svdFrameReconstruct(Udf,avg_check);
-
-AP_image_scroll(fluorescence_check,timevec);
-axis image;
+% avg_check = permute(nanmean(all_stimuli_act,1), [3, 2, 1]);
+% fluorescence_check = AP_svdFrameReconstruct(Udf,avg_check);
+% 
+% AP_image_scroll(fluorescence_check,timevec);
+% axis image;
 
 % split by stimuli use only one for loop!!!
 
-trialStimulusValue 
+all_stim_avg_act = nan(size(all_stim_act,1),size(all_stim_act,2),length(possible_stimuli));
+completed_trialStimulusValue = trialStimulusValue(1:n_trials);
 
+for stim_idx =1:length(possible_stimuli)
+    this_stim_act = all_stim_act(:,:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
+end
+
+all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_stim_avg_act);
+
+AP_image_scroll(all_stim_interval_avg_fluorescence,timevec,stimuli);
+axis image;
 
 
 
