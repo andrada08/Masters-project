@@ -105,23 +105,12 @@ possible_contrasts = unique(signals_events.trialContrastValues);
 possible_stimuli = [-1;1].*possible_contrasts;
 possible_stimuli = unique(possible_stimuli);
 
-correct_fractions = zeros(1,length(possible_stimuli));
-left = -1;
-right = 1;
-for contrast = possible_contrasts
-    contrast_index = find(signals_events.trialContrastValues==contrast);
-    which_index = ones(1,length(contrast_index));
-    which_index(find(signals_events.trialSideValues(contrast_index)== right)) = 2;
-    sum_stimulus = accumarray(which_index',signals_events.hitValues(contrast_index)');
-    number_stimulus = accumarray(which_index',1);
-    correct_fractions(find(possible_stimuli==contrast*left)) = sum_stimulus(1)/number_stimulus(1);
-    if contrast~=0
-        correct_fractions(find(possible_stimuli==contrast*right)) = sum_stimulus(2)/number_stimulus(2);
-    end
-end
+trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialSideValues;
+[correct_fractions, stimuli] = grpstats(signals_events.hitValues, trialStimulusValue, {'mean', 'gname'});
+these_stimuli = cellfun(@str2num, stimuli);
 
 % still doesn't look right? why??
-plot(possible_stimuli, correct_fractions)
+plot(these_stimuli, correct_fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
 
@@ -132,8 +121,6 @@ turnValues = signals_events.trialSideValues;
 turnValues(correct_index)= -signals_events.trialSideValues(correct_index);
 left_turnValues = turnValues == -1;
 
-
-trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialSideValues;
 [left_turn_fractions, stimuli] = grpstats(left_turnValues, trialStimulusValue, {'mean', 'gname'});
 new_stimuli = cellfun(@str2num, stimuli);
 
@@ -284,13 +271,27 @@ axis image;
 
 
 % split by stimuli 
-
 % interp1 function and sampling rate is 35Hz but change timesteps to see
 % what happens - timevec with timesteps in it for 1 second around stimulus
 % onset and then use function and then can put a 3D matrix into the scroll
 % thing!!!!
 
+timestep = 0.1;
+timevec = [-1:timestep:1];
 
+time_stimulus = stimOn_times+timevec;
+ 
+all_stimuli_act = interp1(frame_t,fVdf',time_stimulus);
+
+avg_check = permute(nanmean(all_stimuli_act,1), [3, 2, 1]);
+fluorescence_check = AP_svdFrameReconstruct(Udf,avg_check);
+
+AP_image_scroll(fluorescence_check,timevec);
+axis image;
+
+% split by stimuli use only one for loop!!!
+
+trialStimulusValue 
 
 
 
