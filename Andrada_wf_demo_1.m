@@ -125,12 +125,29 @@ left_turnValues = turnValues == -1;
 new_stimuli = cellfun(@str2num, stimuli);
 
 
-% still doesn't look right? why??
+% plot curve
 plot(new_stimuli, left_turn_fractions)
 xlabel('Possible stimuli')
 ylabel('Fractions')
+hold on
  
 % use accumarray once + unique functions second output to do psychometric curve
+[tmp, ia, trialStimulusValue_groups] = unique(trialStimulusValue);
+left_turn_fractions_other = accumarray(trialStimulusValue_groups,left_turnValues, [],@mean);
+% new_stimuli = cellfun(@str2num, stimuli);
+
+
+% plot curve
+plot(new_stimuli, left_turn_fractions_other)
+xlabel('Possible stimuli')
+ylabel('Fractions')
+
+% compare to check
+plot(new_stimuli, left_turn_fractions_other-left_turn_fractions)
+xlabel('Possible stimuli')
+ylabel('Difference')
+
+ 
 
 %% Widefield data introduction
 % Widefield data is saved in SVD format rather than in pixels because it
@@ -300,9 +317,12 @@ for stim_idx =1:length(possible_stimuli)
     all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
 end
 
+all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,round(size(all_stim_act,2)/2),:);
+
 all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_stim_avg_act);
 
-AP_image_scroll(all_stim_interval_avg_fluorescence,timevec,stimuli);
+% how do i put stimulus in here??
+AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
 axis image;
 
 
