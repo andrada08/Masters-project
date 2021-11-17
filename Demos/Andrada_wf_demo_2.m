@@ -12,6 +12,11 @@
 % edit AP_align_widefield, enter the path in line 30
 % edit AP_reference_outline, enter the path in line 30
 
+addpath(genpath(cd));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 
 %% Retinotopy, alignment, and atlas overlay
 % Now that we can work with widefield data, we want to know where different
@@ -104,6 +109,65 @@ AP_load_experiment;
 % data. View those movies with AP_image_scroll, and overlay the CCF areas
 % with AP_reference_outline. 
 
+% align spatial components ????
+test_aligned = AP_align_widefield(Udf,animal,day);
+
+imagesc(test_aligned)
+
+% % test stuff
+% %
+% % imagesc(new_vfs_aligned)
+% % 
+% % figure
+% % imagesc(vfs_boot_mean)
+% 
+% % make new Udf???
+% imagesc(Udf(:,:,2000))
+
+% find possible stimuli
+possible_contrasts = unique(signals_events.trialContrastValues);
+possible_stimuli = [-1;1].*possible_contrasts;
+possible_stimuli = unique(possible_stimuli);
+
+% find value of stimulus per trial
+trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialSideValues;
+
+% create matrix of times for movie
+timestep = 0.1;
+timevec = [-1:timestep:1];
+
+time_stimulus = stimOn_times+timevec;
+
+% find activity for above time
+all_stim_act = interp1(frame_t,fVdf',time_stimulus);
+all_stim_act = permute(all_stim_act, [3,2,1]);
+
+% avg_check = permute(nanmean(all_stimuli_act,1), [3, 2, 1]);
+% fluorescence_check = AP_svdFrameReconstruct(Udf,avg_check);
+% 
+% AP_image_scroll(fluorescence_check,timevec);
+% axis image;
+
+% split by stimuli use only one for loop!!!
+
+all_stim_avg_act = nan(size(all_stim_act,1),size(all_stim_act,2),length(possible_stimuli));
+completed_trialStimulusValue = trialStimulusValue(1:n_trials);
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_act = all_stim_act(:,:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
+end
+
+all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,round(size(all_stim_act,2)/2),:);
+
+% use aligned U's instead of Udf
+all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(test_aligned,all_stim_avg_act);
+
+% video
+AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
+axis image;
+AP_reference_outline('ccf_aligned','k');
+
 %% Regions of interest (ROIs)
 
 % When we want to plot a line trace for fluorescence in one area, we can
@@ -120,6 +184,35 @@ AP_load_experiment;
 % in the left visual cortex, you should see more activity with increasing
 % contrast on the right-hand screen.
 
+AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
+axis image;
+AP_reference_outline('ccf_aligned','k');
+
+saved_roi = roi;
+
+% set colourmap to differentiate left from right stimuli
+map_left = [0 0 0.2
+    0 0 0.4
+    0 0 0.6
+    0 0 0.8
+    0 0 1.0];
+map_zero = [0 1 0];
+map_right = [0.2 0 0 
+    0.4 0 0
+    0.6 0 0 
+    0.8 0 0 
+    1.0 0 0];
+map = [map_left; map_zero; map_right];
+
+% plot - red is right, blue is left
+roi_figure = figure;
+plot(saved_roi.trace');
+colororder(roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+
+
 % Another way to get activity in an ROI is with SVD data, with the function
 % AP_svd_roi, the inputs are the U's, the V's, and a guide image. This
 % returns the activity within an ROI across the whole recording. 
@@ -130,12 +223,43 @@ AP_load_experiment;
 % response to the stimulus? 
 roi_trace = AP_svd_roi(Udf,fVdf,avg_im);
 
+plot(frame_t,roi_trace)
+xline(stimOn_times,'r')
+% if zoom in see response
+
 % EXERCISE: use interp1 to align and average the ROI to get average
 % fluorescence for each stimulus presentation. This should look the same as
 % the traces above where you made an ROI directly on the average movie -
 % does it?
 
-%% Deconvolution
+roi_stim_act = interp1(frame_t,roi_trace,time_stimulus);
+roi_stim_act = permute(roi_stim_act, [2 1]);
+
+roi_stim_avg_act = nan(size(roi_stim_act,1),length(possible_stimuli));
+completed_trialStimulusValue = trialStimulusValue(1:n_trials);
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_act = roi_stim_act(:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
+end
+
+new_roi_figure = figure;
+plot(roi_stim_avg_act);
+colororder(new_roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+
+% other figure to compare
+roi_figure = figure;
+plot(saved_roi.trace');
+colororder(roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+
+
+%% Deconvolution - left here
 
 % The raw fluorescence is much slower than spikes, and also has an
 % expotential decay when there are no spikes. We can try to get rid of this
