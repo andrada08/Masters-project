@@ -321,7 +321,7 @@ all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,round(size(all_stim_act
 
 all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_stim_avg_act);
 
-% how do i put stimulus in here??
+% 
 AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
 axis image;
 
