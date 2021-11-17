@@ -112,7 +112,7 @@ AP_load_experiment;
 % align spatial components ????
 test_aligned = AP_align_widefield(Udf,animal,day);
 
-imagesc(test_aligned)
+% imagesc(test_aligned)
 
 % % test stuff
 % %
@@ -277,12 +277,59 @@ legend(num2str(possible_stimuli));
 % EXERCISE: use AP_deconv_wf to plot a deconvolved stimulus-aligned
 % fluorescence in V1. What's the difference between deconvolved and raw?
 
+
+deconvolved_roi_stim_avg_act = AP_deconv_wf(roi_stim_avg_act);
+
+deconvolved_roi_figure = figure;
+plot(deconvolved_roi_stim_avg_act);
+colororder(deconvolved_roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+title('Deconvolved data');
+
+% raw version
+
+raw_roi_figure = figure;
+plot(roi_stim_avg_act);
+colororder(raw_roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+title('Raw data');
+
+
 % EXERCISE: you can use AP_deconv_wf on the entire day with
 % AP_deconv_wf(fVdf) (we only need to deconvolve in time - V's, we don't
 % convolve in space so the U's stay the same). As before, make movies of
 % average stimulus-aligned fluorescence, but using deconvolved data. What's
 % the difference between deconvolved and raw?
 
+deconvolved_fVdf = AP_deconv_wf(fVdf);
+
+deconvolved_all_stim_act = interp1(frame_t,deconvolved_fVdf',time_stimulus);
+deconvolved_all_stim_act = permute(deconvolved_all_stim_act, [3,2,1]);
+
+deconvolved_all_stim_avg_act = nan(size(deconvolved_all_stim_act,1),size(deconvolved_all_stim_act,2),length(possible_stimuli));
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_act = deconvolved_all_stim_act(:,:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    deconvolved_all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
+end
+
+deconvolved_all_stim_avg_act = deconvolved_all_stim_avg_act - deconvolved_all_stim_avg_act(:,round(size(all_stim_act,2)/2),:);
+
+deconvolved_all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,deconvolved_all_stim_avg_act);
+
+% deconvolved
+AP_image_scroll(deconvolved_all_stim_interval_avg_fluorescence,timevec);
+axis image;
+
+% raw
+AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
+axis image;
+
+% activity doesn't persist in deconvolved as in raw
 
 
 %% Hemodynamics
@@ -315,8 +362,49 @@ legend(num2str(possible_stimuli));
 % happen?
 
 
+% blue - activity
 
+activity_roi_trace = AP_svd_roi(Un,fVn,avg_im);
 
+activity_roi_stim_act = interp1(frame_t,activity_roi_trace,time_stimulus);
+activity_roi_stim_act = permute(activity_roi_stim_act, [2 1]);
+
+activity_roi_stim_avg_act = nan(size(activity_roi_stim_act,1),length(possible_stimuli));
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_act = activity_roi_stim_act(:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    activity_roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
+end
+
+activity_roi_figure = figure;
+plot(activity_roi_stim_avg_act);
+colororder(activity_roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+title('Activity');
+
+% red - hemodynamics
+
+hemodynamics_roi_trace = AP_svd_roi(Uh,fVh,avg_im);
+
+hemodynamics_roi_stim_act = interp1(frame_t,hemodynamics_roi_trace,time_stimulus);
+hemodynamics_roi_stim_act = permute(hemodynamics_roi_stim_act, [2 1]);
+
+hemodynamics_roi_stim_avg_act = nan(size(hemodynamics_roi_stim_act,1),length(possible_stimuli));
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_act = hemodynamics_roi_stim_act(:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    hemodynamics_roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
+end
+
+hemodynamics_roi_figure = figure;
+plot(hemodynamics_roi_stim_avg_act);
+colororder(hemodynamics_roi_figure,map);
+xlim([1,21]);
+xline(round(length(timevec)/2));
+legend(num2str(possible_stimuli));
+title('Hemodynamics');
 
 
 
