@@ -139,7 +139,7 @@ trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialS
 
 % create matrix of times for movie
 timestep = 0.01;
-timevec = [-1:timestep:2];
+timevec = [-1:timestep:1];
 
 time_stimulus = stimOn_times+timevec;
 
@@ -257,6 +257,7 @@ roi_stim_avg_act = roi_stim_avg_act - roi_stim_avg_act(round(size(roi_stim_avg_a
 new_roi_figure = figure;
 plot(roi_stim_avg_act);
 colororder(new_roi_figure,map);
+xlim([1,21]);
 xline(round(length(timevec)/2));
 legend(num2str(possible_stimuli));
 title('ROI on activity then average');
@@ -310,6 +311,7 @@ deconvolved_roi_stim_avg_act = deconvolved_roi_stim_avg_act - deconvolved_roi_st
 deconvolved_roi_figure = figure;
 plot(deconvolved_roi_stim_avg_act);
 colororder(deconvolved_roi_figure,map);
+xlim([1,21]);
 xline(round(length(timevec)/2));
 legend(num2str(possible_stimuli));
 title('Deconvolved data');
@@ -319,6 +321,7 @@ title('Deconvolved data');
 raw_roi_figure = figure;
 plot(roi_stim_avg_act);
 colororder(raw_roi_figure,map);
+xlim([1,21]);
 xline(round(length(timevec)/2));
 legend(num2str(possible_stimuli));
 title('Raw data');
