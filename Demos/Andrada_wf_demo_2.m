@@ -111,6 +111,11 @@ AP_load_experiment;
 
 % align spatial components ????
 test_aligned = AP_align_widefield(Udf,animal,day);
+% 
+% AP_image_scroll(Udf);
+% axis image;
+% AP_image_scroll(test_aligned);
+% axis image;
 
 % imagesc(test_aligned)
 
@@ -162,6 +167,9 @@ all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,round(size(all_stim_act
 
 % use aligned U's instead of Udf
 all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(test_aligned,all_stim_avg_act);
+
+% all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_stim_avg_act);
+
 
 % video
 AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
@@ -223,8 +231,9 @@ legend(num2str(possible_stimuli));
 % response to the stimulus? 
 roi_trace = AP_svd_roi(Udf,fVdf,avg_im);
 
+figure
 plot(frame_t,roi_trace)
-xline(stimOn_times,'r')
+xline(stimOn_times(completed_trialStimulusValue==1),'r')
 % if zoom in see response
 
 % EXERCISE: use interp1 to align and average the ROI to get average
@@ -243,12 +252,15 @@ for stim_idx =1:length(possible_stimuli)
     roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
 end
 
+roi_stim_avg_act = roi_stim_avg_act - roi_stim_avg_act(round(size(roi_stim_avg_act,1)/2),:);
+
 new_roi_figure = figure;
 plot(roi_stim_avg_act);
 colororder(new_roi_figure,map);
 xlim([1,21]);
 xline(round(length(timevec)/2));
 legend(num2str(possible_stimuli));
+title('ROI on activity then average');
 
 % other figure to compare
 roi_figure = figure;
@@ -257,9 +269,10 @@ colororder(roi_figure,map);
 xlim([1,21]);
 xline(round(length(timevec)/2));
 legend(num2str(possible_stimuli));
+title('ROI on average activity');
 
 
-%% Deconvolution - left here
+%% Deconvolution 
 
 % The raw fluorescence is much slower than spikes, and also has an
 % expotential decay when there are no spikes. We can try to get rid of this
