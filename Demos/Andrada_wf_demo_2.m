@@ -139,7 +139,11 @@ trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialS
 
 % create matrix of times for movie
 timestep = 0.01;
-timevec = [-1:timestep:2];
+start_time = -4;
+end_time = 4;
+timevec = [start_time:timestep:end_time];
+
+stim_frame = (-start_time)*(1/timestep)+1;
 
 time_stimulus = stimOn_times+timevec;
 
@@ -163,7 +167,7 @@ for stim_idx =1:length(possible_stimuli)
     all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
 end
 
-all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,round(size(all_stim_act,2)/2),:);
+all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,stim_frame,:);
 
 % use aligned U's instead of Udf
 all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(test_aligned,all_stim_avg_act);
@@ -216,8 +220,8 @@ map = [map_left; map_zero; map_right];
 roi_figure = figure;
 plot(saved_roi.trace');
 colororder(roi_figure,map);
-xlim([1,21]);
-xline(round(length(timevec)/2));
+xlim([1,length(timevec)]);
+xline(stim_frame);
 legend(num2str(possible_stimuli));
 
 
@@ -252,12 +256,13 @@ for stim_idx =1:length(possible_stimuli)
     roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
 end
 
-roi_stim_avg_act = roi_stim_avg_act - roi_stim_avg_act(round(size(roi_stim_avg_act,1)/2),:);
+roi_stim_avg_act = roi_stim_avg_act - roi_stim_avg_act(stim_frame,:);
 
 new_roi_figure = figure;
 plot(roi_stim_avg_act);
 colororder(new_roi_figure,map);
-xline(round(length(timevec)/2));
+xlim([1,length(timevec)]);
+xline(stim_frame);
 legend(num2str(possible_stimuli));
 title('ROI on activity then average');
 ylim([-0.01 0.06]);
@@ -266,8 +271,8 @@ ylim([-0.01 0.06]);
 roi_figure = figure;
 plot(saved_roi.trace');
 colororder(roi_figure,map);
-xlim([1,21]);
-xline(round(length(timevec)/2));
+xlim([1,length(timevec)]);
+xline(stim_frame);
 legend(num2str(possible_stimuli));
 title('ROI on average activity');
 ylim([-0.01 0.06]);
@@ -305,12 +310,13 @@ for stim_idx =1:length(possible_stimuli)
     deconvolved_roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
 end
 
-deconvolved_roi_stim_avg_act = deconvolved_roi_stim_avg_act - deconvolved_roi_stim_avg_act(round(size(deconvolved_roi_stim_avg_act,1)/2),:);
+deconvolved_roi_stim_avg_act = deconvolved_roi_stim_avg_act - deconvolved_roi_stim_avg_act(stim_frame,:);
 
 deconvolved_roi_figure = figure;
 plot(deconvolved_roi_stim_avg_act);
 colororder(deconvolved_roi_figure,map);
-xline(round(length(timevec)/2));
+xline(stim_frame);
+xlim([1,length(timevec)]);
 legend(num2str(possible_stimuli));
 title('Deconvolved data');
 
@@ -319,7 +325,8 @@ title('Deconvolved data');
 raw_roi_figure = figure;
 plot(roi_stim_avg_act);
 colororder(raw_roi_figure,map);
-xline(round(length(timevec)/2));
+xline(stim_frame);
+xlim([1,length(timevec)]);
 legend(num2str(possible_stimuli));
 title('Raw data');
 
@@ -342,7 +349,7 @@ for stim_idx =1:length(possible_stimuli)
     deconvolved_all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
 end
 
-deconvolved_all_stim_avg_act = deconvolved_all_stim_avg_act - deconvolved_all_stim_avg_act(:,round(size(all_stim_act,2)/2),:);
+deconvolved_all_stim_avg_act = deconvolved_all_stim_avg_act - deconvolved_all_stim_avg_act(:,stim_frame,:);
 
 deconvolved_all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,deconvolved_all_stim_avg_act);
 
@@ -401,11 +408,13 @@ for stim_idx =1:length(possible_stimuli)
     activity_roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
 end
 
+activity_roi_stim_avg_act = activity_roi_stim_avg_act - activity_roi_stim_avg_act(stim_frame,:);
+
 activity_roi_figure = figure;
 plot(activity_roi_stim_avg_act);
 colororder(activity_roi_figure,map);
-xlim([1,21]);
-xline(round(length(timevec)/2));
+xlim([1,length(timevec)]);
+xline(stim_frame);
 legend(num2str(possible_stimuli));
 title('Activity');
 
@@ -423,11 +432,13 @@ for stim_idx =1:length(possible_stimuli)
     hemodynamics_roi_stim_avg_act(:,stim_idx) = nanmean(this_stim_act,2);
 end
 
+hemodynamics_roi_stim_avg_act = hemodynamics_roi_stim_avg_act - hemodynamics_roi_stim_avg_act(stim_frame,:);
+
 hemodynamics_roi_figure = figure;
 plot(hemodynamics_roi_stim_avg_act);
 colororder(hemodynamics_roi_figure,map);
-xlim([1,21]);
-xline(round(length(timevec)/2));
+xlim([1,length(timevec)]);
+xline(stim_frame);
 legend(num2str(possible_stimuli));
 title('Hemodynamics');
 
