@@ -123,15 +123,19 @@ AP_wfmovies(Udf,deconvolved_fVdf,frame_t,eyecam_fn,eyecam_t,facecam_fn,facecam_t
 % start of the experiment, which is set at 0). Positive values means the
 % wheel is turning right, negative values means the wheel is turning left.
 
-wheel_position
-
 % rotaryEncoder_index = strcmp({Timeline.hw.inputs.name}, 'rotaryEncoder');
 % figure;
 % plot(Timeline.rawDAQTimestamps,Timeline.rawDAQData(:,rotaryEncoder_index));
 % xlabel('Time (s)');
 % ylabel('Rotary Encoder');
 
-% something is wrong here it doesn't look right
+% something is wrong here it doesn't look right - use wheel_position
+
+
+figure;
+plot(Timeline.rawDAQTimestamps,wheel_position);
+xlabel('Time (s)');
+ylabel('Rotary Encoder');
 
 % EXERCISE: using the interp1 function, get and plot the wheel position
 % aligned to each stimulus side/contrast. Note - you'll want "0" in your
@@ -139,6 +143,64 @@ wheel_position
 % subtraction will be important here to make sense of the data. Do these
 % traces make sense given what the task is?
 
+% find possible stimuli
+possible_contrasts = unique(signals_events.trialContrastValues);
+possible_stimuli = [-1;1].*possible_contrasts;
+possible_stimuli = unique(possible_stimuli);
+
+% find value of stimulus per trial
+trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialSideValues;
+
+% create time matrix around stimulus onsets
+timestep = 0.01;
+start_time = -4;
+end_time = 4;
+timevec = [start_time:timestep:end_time];
+
+stim_frame = (-start_time)*(1/timestep)+1;
+
+time_stimulus = stimOn_times+timevec;
+
+% find wheel position for stimulus onsets
+all_stim_wheel_position = interp1(Timeline.rawDAQTimestamps,wheel_position,time_stimulus);
+all_stim_wheel_position = permute(all_stim_wheel_position, [2,1]);
+
+all_stim_avg_wheel_position = nan(size(all_stim_wheel_position,1),length(possible_stimuli));
+completed_trialStimulusValue = trialStimulusValue(1:n_trials);
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_wheel = all_stim_wheel_position(:,completed_trialStimulusValue==possible_stimuli(stim_idx));
+    all_stim_avg_wheel_position(:,stim_idx) = nanmean(this_stim_wheel,2);
+end
+
+% substract frame prior to stimulus
+all_stim_avg_wheel_position = all_stim_avg_wheel_position - all_stim_avg_wheel_position(stim_frame-1,:);
+
+% figure 
+% set colourmap to differentiate left from right stimuli
+map_left = [0 0 0.2
+    0 0 0.4
+    0 0 0.6
+    0 0 0.8
+    0 0 1.0];
+map_zero = [0 1 0];
+map_right = [0.2 0 0 
+    0.4 0 0
+    0.6 0 0 
+    0.8 0 0 
+    1.0 0 0];
+map = [map_left; map_zero; map_right];
+
+wheel_and_stim_figure = figure;
+plot(all_stim_avg_wheel_position);
+colororder(wheel_and_stim_figure,map);
+xlabel('Frames')
+xlim([1 length(timevec)])
+ylabel('Wheel position')
+legend(num2str(possible_stimuli));
+
+% yes! when the stimulus is on the right the wheel is moved left and the
+% opposite 
 
 
 % EXERCISE: instead of using the wheel position, we can also look at wheel
@@ -147,10 +209,10 @@ wheel_position
 % positive or negative pulses, which is what the wheel actually sends out
 % to the computer.
 
-calculated_wheel_velocity = [0; diff(Timeline.rawDAQData(:,rotaryEncoder_index))];
-plot(Timeline.rawDAQTimestamps, calculated_wheel_velocity)
+calculated_wheel_velocity = [0; diff(wheel_position)];
+figure;
+plot(Timeline.rawDAQTimestamps, calculated_wheel_velocity);
 
-% still something wrong
 
 % Those blips aren't super useful to look at, so I have a function to
 % smooth these and break them into "movement" and "quiescence" periods.
@@ -267,6 +329,28 @@ axis image;
 % sanity check, plot the median reaction time vs. stimulus and make sure
 % this plot looks like what you expect it to look like. 
 
+all_reaction_times = nan(1,length(possible_stimuli));
+
+for stim_idx =1:length(possible_stimuli)
+    this_stim_times = stimOn_times(completed_trialStimulusValue==possible_stimuli(stim_idx));
+    this_reaction_times = arrayfun(@(X) move_times(find(move_times>X,1,'first'))- X, this_stim_times, 'Uni', 1);
+    all_reaction_times(stim_idx) = nanmean(this_reaction_times);
+end
+
+mean_reaction_time = nanmean(all_reaction_times);
+median_reaction_time = median(all_reaction_times);
+
+figure;
+plot(possible_stimuli,all_reaction_times)
+hold on;
+yline(median_reaction_time)
+yline(mean_reaction_time,'r')
+ylabel('Reaction time (s)')
+xlabel('Stimulus')
+
+% for right there's much bigger values - but I don't trust my move times so
+% not surprised
+
 % EXERCISE: align widefield activity to the onset of all stimuli on the
 % righthand screen (use all contrasts except zero - just lump them all
 % together). Split these trials by reaction times into a few groups, so
@@ -275,18 +359,41 @@ axis image;
 % groups. What changes in the activity across these reaction time groups?
 
 
+rightstimOn_times = stimOn_times(completed_trialStimulusValue>0);
 
+% get activity 
+timestep = 0.01;
+start_time = -2;
+end_time = 2;
+timevec = [start_time:timestep:end_time];
 
+stim_frame = (-start_time)*(1/timestep)+1;
 
+time_stimulus = rightstimOn_times+timevec;
 
+% find activity for above time
+right_stim_act = interp1(frame_t,fVdf',time_stimulus);
+right_stim_act = permute(right_stim_act, [3,2,1]);
 
+% get categories of reaction times
+right_reaction_times = arrayfun(@(X) move_times(find(move_times>X,1,'first'))- X, rightstimOn_times, 'Uni', 1);
+right_reaction_times_categories = discretize(right_reaction_times,[0 1 5 15 100 200]); 
+possible_categories = unique(right_reaction_times_categories);
 
+right_stim_reaction_times_avg_act = nan(size(right_stim_act,1),size(right_stim_act,2),length(possible_categories));
 
+for category=1:length(possible_categories)
+    this_category_act = right_stim_act(:,:,right_reaction_times_categories==category);
+    right_stim_reaction_times_avg_act(:,:,category) = nanmean(this_category_act,3);
+end
 
+right_stim_reaction_times_avg_act = right_stim_reaction_times_avg_act - right_stim_reaction_times_avg_act(:,stim_frame,:);
 
+right_stim_reaction_times_avg_fluorescence = AP_svdFrameReconstruct(Udf,right_stim_reaction_times_avg_act);
 
-
-
+% not sure
+AP_image_scroll(right_stim_reaction_times_avg_fluorescence,timevec);
+axis image;
 
 
 
