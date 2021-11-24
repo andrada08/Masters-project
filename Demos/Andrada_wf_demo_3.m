@@ -123,11 +123,13 @@ AP_wfmovies(Udf,deconvolved_fVdf,frame_t,eyecam_fn,eyecam_t,facecam_fn,facecam_t
 % start of the experiment, which is set at 0). Positive values means the
 % wheel is turning right, negative values means the wheel is turning left.
 
-rotaryEncoder_index = strcmp({Timeline.hw.inputs.name}, 'rotaryEncoder');
-figure;
-plot(Timeline.rawDAQTimestamps,Timeline.rawDAQData(:,rotaryEncoder_index));
-xlabel('Time (s)');
-ylabel('Rotary Encoder');
+wheel_position
+
+% rotaryEncoder_index = strcmp({Timeline.hw.inputs.name}, 'rotaryEncoder');
+% figure;
+% plot(Timeline.rawDAQTimestamps,Timeline.rawDAQData(:,rotaryEncoder_index));
+% xlabel('Time (s)');
+% ylabel('Rotary Encoder');
 
 % something is wrong here it doesn't look right
 
