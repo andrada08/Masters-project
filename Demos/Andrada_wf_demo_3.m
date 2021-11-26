@@ -53,12 +53,17 @@ AP_reference_outline('ccf_aligned','k');
 % also more lateral (temporal???) V1 has a correlation to the other side
 
 % blobs on frontotemporal sides (primary motor cortices and top part of MOs and a somatosensory area)
+% -- related to mouth/face movement
 
 % blob frontomedial region (MOs, ALM etc.)
 
-% blob dorsomedial? region (not sure what it is)
+% blob dorsomedial? region (not sure what it is) - retrosplenial area (value, history, up/down tilt of head?)
+% --- input from hippocampus
 
-% mid-temporal blob on each side (somatosensory areas)
+% mid-temporal blob on each side (somatosensory areas+motor)
+% --- limb movement areas
+
+% blob on barrel somatosensory area+bit of motor+MOs
 
 % - Sometimes you'll see a pattern where you'll have separated spots of
 % correlated pixels that merge together as you move the mouse. Where are
@@ -103,13 +108,14 @@ AP_wfmovies(Udf,fVdf,frame_t,eyecam_fn,eyecam_t,facecam_fn,facecam_t)
 % about activity/behavior in this data that you couldn't see in the raw
 % data?
 
-AP_wfmovies(Udf,deconvolved_fVdf,frame_t,eyecam_fn,eyecam_t,facecam_fn,facecam_t)
+AP_wfmovies(Udf,fVdf_deconvolved,frame_t,eyecam_fn,eyecam_t,facecam_fn,facecam_t)
 
 % can see the areas better - activity doesn't linger so can see fluoresence
 % travelling from a region to another
 
-% activity in the region I don't know the name of - midline but under MOs
-% and next to visual areas - perhaps licking related??? not sure
+% activity in retrosplenial cortex
+
+% oscillation in back when mouse is still - visual+retrosplenial cortex
 
 %% Wheel movement
 
@@ -247,7 +253,8 @@ plot(t,wheel_velocity_movement,'r');
 move_frames = [];
 i = 2001;
 while i<=length(wheel_move)-2000
-    if wheel_move(i) && sum(wheel_move(i-2000:i))<=0.20*length(wheel_move(i-2000:i)) && sum(wheel_move(i:i+2000))>=0.80*length(wheel_move(i:i+2000))
+    if wheel_move(i) && sum(wheel_move(i-2000:i))<=0.20*length(wheel_move(i-2000:i)) ...
+            && sum(wheel_move(i:i+2000))>=0.80*length(wheel_move(i:i+2000))
         move_frames = [move_frames i];
         i = i + 2000; 
     else
@@ -256,6 +263,10 @@ while i<=length(wheel_move)-2000
 end
 
 move_times = t(move_frames);
+
+% use diff to get movement onsets
+
+% compare onset of movement after stimulus to just movement (two separate things)
 
 % get activity for window around movement onset
 timestep = 0.1;
@@ -300,6 +311,8 @@ axis image;
 move_velocity = wheel_velocity(move_frames);
 possible_moves = unique(move_velocity); % only have two options here
 move_categories = discretize(move_velocity,[-1 0 1],'categorical', {'left', 'right'}); % why do this??
+
+% use prctile function - gives threshold for split
 
 all_move_avg_act = nan(size(move_act,1),size(move_act,2),length(possible_moves));
 
