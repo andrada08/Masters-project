@@ -248,27 +248,12 @@ plot(t,wheel_velocity_movement,'r');
 % average widefield fluorescence aligned to movement. What's going on in
 % this movie?
 
-% get movement onsets - not sure about this because it's longer than
-% stimulus onsets
-move_frames = [];
-i = 2001;
-while i<=length(wheel_move)-2000
-    if wheel_move(i) && sum(wheel_move(i-2000:i))<=0.20*length(wheel_move(i-2000:i)) ...
-            && sum(wheel_move(i:i+2000))>=0.80*length(wheel_move(i:i+2000))
-        move_frames = [move_frames i];
-        i = i + 2000; 
-    else
-        i = i + 1;
-    end
-end
+% use diff to get all movement onsets
+tmp_move = [0; diff(wheel_move)];
+all_move_frames = find(tmp_move==1);
+all_move_times = t(all_move_frames);
 
-move_times = t(move_frames);
-
-% use diff to get movement onsets
-
-% compare onset of movement after stimulus to just movement (two separate things)
-
-% get activity for window around movement onset
+% get activity for window around all movement onsets
 timestep = 0.1;
 start_time = -2;
 end_time = 2;
@@ -276,7 +261,35 @@ timevec = [start_time:timestep:end_time];
 
 move_frame = (-start_time)*(1/timestep)+1;
 
-time_move = move_times'+timevec;
+time_move = all_move_times'+timevec;
+ 
+all_move_act = interp1(frame_t,fVdf',time_move);
+all_move_act = permute(all_move_act, [3,2,1]);
+
+% get average across all moves and baseline substract 
+all_move_avg_act = nanmean(all_move_act,3);
+all_move_avg_act = all_move_avg_act - all_move_avg_act(:,move_frame,:);
+
+all_move_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_move_avg_act);
+
+% movie 
+AP_image_scroll(all_move_avg_fluorescence,timevec);
+axis image;
+
+
+% movement onset after stimulus
+moveOn_frames = cell2mat(arrayfun(@(X) find(all_move_times>X,1,'first'),stimOn_times', 'UniformOutput', 0));
+moveOn_times = all_move_times(moveOn_frames);
+
+% get activity for window around all movement onsets
+timestep = 0.1;
+start_time = -2;
+end_time = 2;
+timevec = [start_time:timestep:end_time];
+
+move_frame = (-start_time)*(1/timestep)+1;
+
+time_move = all_move_times'+timevec;
  
 move_act = interp1(frame_t,fVdf',time_move);
 move_act = permute(move_act, [3,2,1]);
@@ -287,10 +300,15 @@ move_avg_act = move_avg_act - move_avg_act(:,move_frame,:);
 
 move_avg_fluorescence = AP_svdFrameReconstruct(Udf,move_avg_act);
 
-% movie - activity in somatosensory areas
+% movie 
 AP_image_scroll(move_avg_fluorescence,timevec);
 axis image;
 
+% all move onsets again
+AP_image_scroll(all_move_avg_fluorescence,timevec);
+axis image;
+
+% looks the same yay!!
 
 % EXERCISE: is the movement-aligned activity different depending on how
 % fast and in which direction the mouse is moving the wheel? This will be
@@ -308,16 +326,16 @@ axis image;
 % small right turn, etc.), align the widefield images to those movement
 % onsets and see how the activity varies with movement speed and direction.
 
-move_velocity = wheel_velocity(move_frames);
+move_velocity = wheel_velocity(all_move_frames);
 possible_moves = unique(move_velocity); % only have two options here
 move_categories = discretize(move_velocity,[-1 0 1],'categorical', {'left', 'right'}); % why do this??
 
 % use prctile function - gives threshold for split
 
-all_move_avg_act = nan(size(move_act,1),size(move_act,2),length(possible_moves));
+all_move_avg_act = nan(size(all_move_act,1),size(all_move_act,2),length(possible_moves));
 
 for move_idx =1:length(possible_moves)
-    this_move_act = move_act(:,:,move_velocity==possible_moves(move_idx));
+    this_move_act = all_move_act(:,:,move_velocity==possible_moves(move_idx));
     all_move_avg_act(:,:,move_idx) = nanmean(this_move_act,3);
 end
 
