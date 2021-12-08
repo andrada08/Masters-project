@@ -278,8 +278,8 @@ axis image;
 
 
 % movement onset after stimulus
-moveOn_frames = cell2mat(arrayfun(@(X) find(all_move_times>X,1,'first'),stimOn_times', 'UniformOutput', 0));
-moveOn_times = all_move_times(moveOn_frames);
+moveOn_times = all_move_times(cell2mat(arrayfun(@(X) find(all_move_times>X,1,'first'),stimOn_times', 'UniformOutput', 0)));
+moveOn_frames = cell2mat(arrayfun(@(X) find(t==X,1),moveOn_times, 'UniformOutput', 0));
 
 % get activity for window around all movement onsets
 timestep = 0.1;
@@ -289,7 +289,7 @@ timevec = [start_time:timestep:end_time];
 
 move_frame = (-start_time)*(1/timestep)+1;
 
-time_move = all_move_times'+timevec;
+time_move = moveOn_times'+timevec;
  
 move_act = interp1(frame_t,fVdf',time_move);
 move_act = permute(move_act, [3,2,1]);
@@ -326,26 +326,33 @@ axis image;
 % small right turn, etc.), align the widefield images to those movement
 % onsets and see how the activity varies with movement speed and direction.
 
-move_velocity = wheel_velocity(all_move_frames);
-possible_moves = unique(move_velocity); % only have two options here
-move_categories = discretize(move_velocity,[-1 0 1],'categorical', {'left', 'right'}); % why do this??
+% get mean of 10 frames? after
+frames = 1:100;
+after_move_frames = moveOn_frames + frames';
+move_velocity = mean(wheel_velocity(after_move_frames),1);
 
-% use prctile function - gives threshold for split
+% use prctile function - gives threshold for split - didn't really use this
+move_percentiles = prctile(move_velocity,80);
 
-all_move_avg_act = nan(size(all_move_act,1),size(all_move_act,2),length(possible_moves));
+% categorize values
+move_categories = discretize(move_velocity,[-1 -0.04 -0.02 0 0.02 0.04 1],'categorical', ...
+    {'quick left', 'medium left', 'slow left', 'slow right', 'medium right', 'quick right'}); 
+possible_moves = unique(move_categories); 
+
+move_avg_act = nan(size(move_act,1),size(move_act,2),length(possible_moves));
 
 for move_idx =1:length(possible_moves)
-    this_move_act = all_move_act(:,:,move_velocity==possible_moves(move_idx));
-    all_move_avg_act(:,:,move_idx) = nanmean(this_move_act,3);
+    this_move_act = move_act(:,:,move_categories==possible_moves(move_idx));
+    move_avg_act(:,:,move_idx) = nanmean(this_move_act,3);
 end
 
-all_move_avg_act = all_move_avg_act - all_move_avg_act(:,move_frame,:);
+move_avg_act = move_avg_act - move_avg_act(:,move_frame,:);
 
-% use aligned U's instead of Udf
-all_move_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_move_avg_act);
+% get fluorescence 
+move_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,move_avg_act);
 
 % video
-AP_image_scroll(all_move_interval_avg_fluorescence,timevec);
+AP_image_scroll(move_interval_avg_fluorescence,timevec);
 axis image;
 
 
@@ -360,11 +367,13 @@ axis image;
 % sanity check, plot the median reaction time vs. stimulus and make sure
 % this plot looks like what you expect it to look like. 
 
+moveOn_times = moveOn_times';
+
 all_reaction_times = nan(1,length(possible_stimuli));
 
 for stim_idx =1:length(possible_stimuli)
-    this_stim_times = stimOn_times(completed_trialStimulusValue==possible_stimuli(stim_idx));
-    this_reaction_times = arrayfun(@(X) move_times(find(move_times>X,1,'first'))- X, this_stim_times, 'Uni', 1);
+    this_index = completed_trialStimulusValue==possible_stimuli(stim_idx);
+    this_reaction_times = moveOn_times(this_index) - stimOn_times(this_index);
     all_reaction_times(stim_idx) = nanmean(this_reaction_times);
 end
 
@@ -379,8 +388,7 @@ yline(mean_reaction_time,'r')
 ylabel('Reaction time (s)')
 xlabel('Stimulus')
 
-% for right there's much bigger values - but I don't trust my move times so
-% not surprised
+% for right there's much bigger values why
 
 % EXERCISE: align widefield activity to the onset of all stimuli on the
 % righthand screen (use all contrasts except zero - just lump them all
@@ -407,7 +415,7 @@ right_stim_act = interp1(frame_t,fVdf',time_stimulus);
 right_stim_act = permute(right_stim_act, [3,2,1]);
 
 % get categories of reaction times
-right_reaction_times = arrayfun(@(X) move_times(find(move_times>X,1,'first'))- X, rightstimOn_times, 'Uni', 1);
+right_reaction_times = arrayfun(@(X) moveOn_times(find(moveOn_times>X,1,'first'))- X, rightstimOn_times, 'Uni', 1);
 right_reaction_times_categories = discretize(right_reaction_times,[0 1 5 15 100 200]); 
 possible_categories = unique(right_reaction_times_categories);
 
