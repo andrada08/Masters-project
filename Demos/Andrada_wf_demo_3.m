@@ -416,7 +416,14 @@ right_stim_act = permute(right_stim_act, [3,2,1]);
 
 % get categories of reaction times
 right_reaction_times = arrayfun(@(X) moveOn_times(find(moveOn_times>X,1,'first'))- X, rightstimOn_times, 'Uni', 1);
-right_reaction_times_categories = discretize(right_reaction_times,[0 1 5 15 100 200]); 
+
+% right_reaction_times_percentiles = prctile(right_reaction_times,20)
+% right_reaction_times_percentiles = prctile(right_reaction_times,40)
+% right_reaction_times_percentiles = prctile(right_reaction_times,60)
+% right_reaction_times_percentiles = prctile(right_reaction_times,80)
+% right_reaction_times_percentiles = prctile(right_reaction_times,100)
+
+right_reaction_times_categories = discretize(right_reaction_times,[0 1 2 4 6 22]); 
 possible_categories = unique(right_reaction_times_categories);
 
 right_stim_reaction_times_avg_act = nan(size(right_stim_act,1),size(right_stim_act,2),length(possible_categories));
@@ -433,6 +440,9 @@ right_stim_reaction_times_avg_fluorescence = AP_svdFrameReconstruct(Udf,right_st
 % not sure
 AP_image_scroll(right_stim_reaction_times_avg_fluorescence,timevec);
 axis image;
+
+% more frontal activity with fastest RT
+% more lateralized visual response in contralateral side with slower reaction times
 
 
 
