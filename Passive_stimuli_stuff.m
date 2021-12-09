@@ -7,7 +7,7 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 
 %% Initial stuff
 mice = {'AP107','AP108','AP109'};
-dates = {'2021-11-23','2021-11-24','2021-12-07'};
+dates = {'2021-11-23','2021-11-24','2021-12-07','2021-12-08','2021-12-09'};
 % dates = {'2021-12-07'};
 
 % retinotopy for each mouse
@@ -28,7 +28,10 @@ for day_idx=1:length(dates)
     for mouse_idx=1:length(mice)
         animal = mice{mouse_idx};
         day = dates{day_idx};
-        experiment = 1;
+        experiment = 2;
+        if day_idx<=3
+            experiment = 1;
+        end
         verbose = true;
         AP_load_experiment;
         
