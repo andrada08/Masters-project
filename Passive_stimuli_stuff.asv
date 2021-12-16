@@ -9,7 +9,7 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 mice = {'AP107','AP108','AP109'};
 all_dates = {'2021-11-23','2021-11-24','2021-12-07','2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
 passive_only_dates = {'2021-11-23','2021-11-24','2021-12-07'};
-training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
+training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14'};
 % dates = {'2021-12-07'};
 
 % retinotopy for each mouse
@@ -31,7 +31,7 @@ for day_idx=1:length(training_dates)
         animal = mice{mouse_idx};
         day = training_dates{day_idx};
         experiment = 2;
-        if strcmp(day,'2021-12-13') && strcmp(animal,'AP107')
+        if day == '2021-12-13' && animal == 'AP107'
             experiment = 3; 
         end
 %         if day_idx<=3

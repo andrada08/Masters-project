@@ -148,26 +148,8 @@ move_reward_velocity = mean(wheel_velocity(after_move_frames),1);
 figure
 plot(move_reward_velocity)
 
-after_reward_frames = reward_t_timeline + frames; 
-
-% wheel velocity aligned to reward
 wheel_aligned_reward = interp1(t,wheel_velocity,reward_t_timeline);
-figure;plot(wheel_aligned_reward)
 
-% wheel velocity aligned to all moves
-tmp_move = [0; diff(wheel_move)];
-all_move_frames = find(tmp_move==1);
-all_move_times = t(all_move_frames);
-
-moveOn_times = all_move_times(cell2mat(arrayfun(@(X) find(all_move_times>X,1,'first'),stimOn_times', 'UniformOutput', 0)));
-moveOn_frames = cell2mat(arrayfun(@(X) find(t==X,1),moveOn_times, 'UniformOutput', 0));
-
-not_moveOn_times = cell2mat(arrayfun(@(X) find(all_move_times~=X,1),moveOn_times, 'UniformOutput', 0));
-
-wheel_aligned_move = interp1(t,wheel_velocity,not_moveOn_times);
-figure;plot(wheel_aligned_move)
-hold on
-plot(wheel_aligned_reward)
 
 % rightmove_frames = find(wheel_velocity(move_reward_frames)>0);
 
