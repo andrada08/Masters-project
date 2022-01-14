@@ -308,6 +308,12 @@ axis image;
 AP_image_scroll(all_move_avg_fluorescence,timevec);
 axis image;
 
+AP_image_scroll(all_move_avg_fluorescence-move_avg_fluorescence,timevec);
+axis image;
+colormap(brewermap([],'PRGn'));
+caxis([-max(abs(caxis)),max(abs(caxis))])
+
+
 % looks the same yay!!
 
 % EXERCISE: is the movement-aligned activity different depending on how
@@ -354,6 +360,17 @@ move_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,move_avg_act);
 % video
 AP_image_scroll(move_interval_avg_fluorescence,timevec);
 axis image;
+
+figure;
+plot(timevec,roi.trace')
+
+% DEMO SEQUENTIAL COLORMAP
+n = 5;
+x = rand(100,n);
+figure; hold on;
+set(gca,'ColorOrder',copper(n));
+plot(x)
+
 
 
 %% Combining stimulus, movements, and imaging
