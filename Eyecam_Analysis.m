@@ -2,9 +2,9 @@
 addpath(genpath(cd));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
-addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
 
 %% Load DLC output
@@ -239,4 +239,26 @@ for stim_idx =1:length(possible_stimuli)
     title(['Left Frontal ROI and stimulus ' num2str(possible_stimuli(stim_idx))])
 end
 
+% 3 plots - one fluorescence, one pupil,  - mean
+% and line in between stuff
+% combined (z-score before) - use errorbar instead of dots: standard dev or
+% standard error of mean (std/sqrt(#points))
+figure;hold on;
+set(gca,'ColorOrder',copper(3));
+for stim_idx =1:length(possible_stimuli)
+    plot(stim_idx, pupil_diameter_stim_avg(trialStimulusValue==possible_stimuli(stim_idx)), 'o');
+    hold on;
+    plot(stim_idx, avg_right_visual_roi(trialStimulusValue==possible_stimuli(stim_idx)), '*');
+    hold on; 
+end
 
+% like this but label with stuff from correlation and do all areas
+figure;hold on;
+set(gca,'ColorOrder',copper(3));
+for stim_idx =1:length(possible_stimuli)
+    plot(avg_right_visual_roi(trialStimulusValue==possible_stimuli(stim_idx)), pupil_diameter_stim_avg(trialStimulusValue==possible_stimuli(stim_idx)), 'o');
+    hold on; 
+end
+% for correlation
+% corrcoef - get R-value and p-value
+corr

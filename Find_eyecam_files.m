@@ -1,6 +1,13 @@
 
+%% Paths to stuff
+addpath(genpath(cd));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
-
+%% code
 animal = 'AP108';
 protocol = 'AP_lcrGratingPassive';
 experiments = AP_find_experiments(animal, protocol);
