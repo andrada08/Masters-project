@@ -8,21 +8,23 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
 %% code
-animal = 'AP108';
-protocol = 'AP_lcrGratingPassive';
-experiments = AP_find_experiments(animal, protocol);
+animals = {'AP100','AP101','AP103','AP104','AP105','AP106','AP107','AP108','AP109'};
 
 eyecam_all_fn = {};
-for day_index=1:length(experiments)
-    day = experiments(day_index).day;
-    exp_day = AP_list_experiments(animal,day);
-    for experiment=[exp_day.experiment]
-        [eyecam_fn, eyecam_exists] = AP_cortexlab_filename(animal,day,experiment,'eyecam');
-        if ~eyecam_exists
-            continue
+for animal_id=1:length(animals)
+    animal = animals{animal_id};
+    experiments = AP_find_experiments(animal);
+    for day_index=1:length(experiments)
+        day = experiments(day_index).day;
+        exp_day = AP_list_experiments(animal,day);
+        for experiment=[exp_day.experiment]
+            [eyecam_fn, eyecam_exists] = AP_cortexlab_filename(animal,day,experiment,'eyecam');
+            if ~eyecam_exists
+                continue
+            end
+            eyecam_all_fn = [eyecam_all_fn {eyecam_fn}];
         end
-        eyecam_all_fn = [eyecam_all_fn {eyecam_fn}];
-    end 
+    end
 end
 
 formatted_eyecam_all_fn = cellfun(@(x) ['r''' x ''''], eyecam_all_fn, 'Uni', 0);
