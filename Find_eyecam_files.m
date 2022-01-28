@@ -34,3 +34,38 @@ fid = fopen('eyecam_paths.txt','w');
 fprintf(fid, 'videos = [%s]', strjoin(formatted_eyecam_all_fn, ', '))
 
 fclose(fid)
+
+%% Find and load early and late video for each mouse
+
+animals = {'AP100','AP101','AP103','AP104','AP105','AP106','AP107','AP108','AP109'};
+
+for animal_id=1:length(animals)
+    animal = animals{animal_id};
+    experiments = AP_find_experiments(animal);
+    
+    % early day - day 4
+    day = experiments(4).day;
+    experiment = 1;
+    load_parts.imaging = false;
+    load_parts.cam = true;
+    AP_load_experiment;
+    
+    AP_mousemovie(eyecam_fn,eyecam_dlc)
+    
+    % late day - second to last day
+    day = experiments(length(experiments)-2).day;
+    experiment = 1;
+    
+    % there is just one session from AP101 that doesn't have eyecam 
+    [eyecam_fn, eyecam_exists] = AP_cortexlab_filename(animal,day,experiment,'eyecam');
+    if ~eyecam_exists
+        day = experiments(length(experiments)-3).day;
+    end
+    
+    load_parts.imaging = false;
+    load_parts.cam = true;
+    AP_load_experiment;
+    
+    AP_mousemovie(eyecam_fn,eyecam_dlc) 
+    
+end
