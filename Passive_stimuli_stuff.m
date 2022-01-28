@@ -6,11 +6,14 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 
 %% Initial stuff
-mice = {'AP107','AP108','AP109'};
-all_dates = {'2021-11-23','2021-11-24','2021-12-07','2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
-passive_only_dates = {'2021-11-23','2021-11-24','2021-12-07'};
-training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
+% mice = {'AP107','AP108','AP109'};
+% all_dates = {'2021-11-23','2021-11-24','2021-12-07','2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
+% passive_only_dates = {'2021-11-23','2021-11-24','2021-12-07'};
+% training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
 % dates = {'2021-12-07'};
+
+mice = {'AP110', 'AP111', 'AP112'};
+passive_only_dates = {'2022-01-19','2022-01-20','2022-01-21'};
 
 % retinotopy for each mouse
 % mouse_idx = 1;
@@ -26,17 +29,23 @@ training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-1
 % end
 
 %% Load experiment
-for day_idx=1:length(training_dates)
+% for day_idx=1:length(training_dates)
+%     for mouse_idx=1:length(mice)
+%         animal = mice{mouse_idx};
+%         day = training_dates{day_idx};
+%         experiment = 2;
+%         if strcmp(day,'2021-12-13') && strcmp(animal,'AP107')
+%             experiment = 3; 
+%         end
+% %         if day_idx<=3
+% %             experiment = 1;
+% %         end
+
+for day_idx=1:length(passive_only_dates)
     for mouse_idx=1:length(mice)
         animal = mice{mouse_idx};
-        day = training_dates{day_idx};
-        experiment = 2;
-        if strcmp(day,'2021-12-13') && strcmp(animal,'AP107')
-            experiment = 3; 
-        end
-%         if day_idx<=3
-%             experiment = 1;
-%         end
+        day = passive_only_dates{day_idx};
+        experiment = 1;
         verbose = true;
         AP_load_experiment;
         
