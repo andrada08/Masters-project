@@ -15,16 +15,22 @@ for animal_id=1:length(animals)
     eyeblink(animal_id).animal = animal;
     protocol = 'AP_lcrGratingPassive';
     experiments = AP_find_experiments(animal,protocol);
+    eyeblink(animal_id).blinks = nan(length(experiments),3);
     for day_index=1:length(experiments)
         day = experiments(day_index).day;
         eyeblink(animal_id).day{day_index} = day;
-        experiment = experiments(day_index).experiment;
+        experiment = experiments(day_index).experiment(end);
         load_parts.imaging = false;
         load_parts.cam = true;
         verbose = true;
         AP_load_experiment;
         
         %% Load DLC output old
+        
+        if isempty(eyecam_dlc_filename)
+            disp(['Eyecam DLC missing for ' animal ' ' day ' ' num2str(experiment)])
+            continue
+        end
         
         eyecam_DLC_output = readmatrix(eyecam_dlc_filename);
         
@@ -54,6 +60,10 @@ for animal_id=1:length(animals)
         
         pupil_valid = all(data(:, 3:3:12) > eyecam_DLC_params.minCertainty, 2);
         
+        if sum(pupil_valid) == 0
+            continue
+        end
+        
         [F, F0] = dlc.estimateHeightFromWidthPos(pupil_width(pupil_valid), pupil_height(pupil_valid), ...
             pupil_centerX(pupil_valid), eyecam_DLC_params);
         
@@ -81,10 +91,9 @@ for animal_id=1:length(animals)
         
         pupil_valid = all(eyecam_dlc_likelihood(:, :) > eyecam_DLC_params.minCertainty, 2);
         
-        pupil_likelihood = eyecam_dlc_likelihood(:,4:8);
+        pupil_likelihood = eyecam_dlc_likelihood(:,5:8);
         
-        uncertain_pupil_points = min(pupil_likelihood,[],2)<0.8; % only find 25 from this
-        % also previous and next 5 frames
+        uncertain_pupil_points = sum(pupil_likelihood > 0.8, 2) <= 2;        % also previous and next 5 frames
         tmp = uncertain_pupil_points;
         for t = 1:eyecam_DLC_params.surroundingBlinks
             uncertain_pupil_points = uncertain_pupil_points | [false(t,1); tmp(1:end-t)];
@@ -108,3 +117,7 @@ for animal_id=1:length(animals)
 end
 
 disp('Done all')
+
+% Save 
+save('eyeblink.mat', 'eyeblink')
+disp('Saved')

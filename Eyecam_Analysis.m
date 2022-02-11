@@ -6,146 +6,6 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
-
-%% Load dlc within load experiment
-
-% animal = 'AP106';
-% %experiments = AP_find_experiments(animal);
-% day = '2021-06-24';
-% experiment = 2;
-% verbose = true;
-% load_parts.imaging = false;
-% load_parts.cam = true;
-% AP_load_experiment;
-
-
-animal = 'AP108';
-% day = '2021-12-08';
-day = '2021-12-16';
-experiment = 2;
-load_parts.imaging = false;
-load_parts.cam = true;
-verbose = true;
-AP_load_experiment;
-
-%% Load DLC output old 
-
-% beginning of training
-% eyecam_DLC_fn = 'C:\Users\Andrada\Desktop\Andy_Pupil DLC\AP108_2021-12-08_2\eyeDLC_resnet50_PupilDetectorApr28shuffle1_1030000.csv';
-
-% end of training
-eyecam_DLC_fn = 'C:\Users\Andrada\Desktop\Andy_Pupil DLC\AP108_2021-12-16_2\eyeDLC_resnet50_PupilDetectorApr28shuffle1_1030000.csv';
-
-% eyecam_fn = '\\znas.cortexlab.net\Subjects\AP106\2021-06-24\2\eye.mj2'
-
-% eyecam_DLC_fn = '\\znas.cortexlab.net\Subjects\AP106\2021-06-24\2\eyeDLC_resnet50_PupilDetectorApr28shuffle1_1030000.csv';
-
-eyecam_DLC_output = readmatrix(eyecam_DLC_fn);
-
-pupil_top = eyecam_DLC_output(:,2:4); % [x y likelihood]
-pupil_bottom = eyecam_DLC_output(:,5:7);
-pupil_right = eyecam_DLC_output(:,8:10);
-pupil_left = eyecam_DLC_output(:,11:13);
-lid_top = eyecam_DLC_output(:,14:16);
-lid_bottom = eyecam_DLC_output(:,17:19);
-data = [pupil_top, pupil_bottom, pupil_left, pupil_right, lid_top, lid_bottom];
-
-%% Make matrix of DLC output
-eye_parts = fieldnames(eyecam_dlc);
-coordinates = fieldnames(eyecam_dlc.pupil_top);
-
-% doesn't work because they have different size
-% eyecam_DLC_data = arrayfun(@(x,y) eyecam_dlc.(eye_parts{x}).(coordinates{y}), [1:length(eye_parts)], [1:length(coordinates)], 'UniformOutput', false);
-
-eyecam_DLC_data = [];
-for field_idx=length(eye_parts):-1:3
-    for coordinate_idx=1:length(coordinates)
-        eyecam_DLC_data = [eyecam_DLC_data eyecam_dlc.(eye_parts{field_idx}).(coordinates{coordinate_idx})];
-    end
-end
-
-% not the same as data (order of columns) - just use data 
-
-%% Parameters - from pupil DLC page
-eyecam_DLC_params.minCertainty = 0.6;
-eyecam_DLC_params.lidMinStd = 7;
-eyecam_DLC_params.minDistLidCenter = 0.5; % in number of pupil heights
-eyecam_DLC_params.surroundingBlinks = 5; % in frames
-eyecam_DLC_params.interpMethod = 'linear';
-eyecam_DLC_params.maxDistPupilLid = 10; % in pixels
-eyecam_DLC_params.smoothSpan = 5; % in frames
-
-%% Some processing steps from pupil DLC page?
-
-% relation between horizontal pupil position, and width and height of pupil
-
-
-pupil_width = pupil_right(:,1) - pupil_left(:,1);
-pupil_height = pupil_bottom(:,2) - pupil_top(:,2);
-pupil_centerX = pupil_left(:,1) + 0.5 .* pupil_width;
-
-pupil_valid = all(data(:, 3:3:12) > eyecam_DLC_params.minCertainty, 2);
-
-[F, F0] = dlc.estimateHeightFromWidthPos(pupil_width(pupil_valid), pupil_height(pupil_valid), ...
-    pupil_centerX(pupil_valid), eyecam_DLC_params);
-    
-[pupil_centerY_adj, pupil_height_adj] = dlc.adjustCenterHeight(data, F, eyecam_DLC_params);
-    
-[blinks, bl_starts, bl_stops] = dlc.detectBlinks(data, eyecam_DLC_params, ...
-    pupil_centerY_adj, pupil_height_adj, true);
-    
-pupil_centerX = medfilt1(pupil_centerX, eyecam_DLC_params.smoothSpan);
-pupil_centerY_adj = medfilt1(pupil_centerY_adj, eyecam_DLC_params.smoothSpan);
-pupil_center = [pupil_centerX, pupil_centerY_adj];
-pupil_center(blinks,:) = NaN;
-pupil_height_adj = medfilt1(pupil_height_adj, eyecam_DLC_params.smoothSpan);
-diameter = pupil_height_adj;
-diameter(blinks) = NaN;
-
-
-% Simpler method
-
-pupil_width = eyecam_dlc.pupil_right.x - eyecam_dlc.pupil_left.x;
-pupil_height = eyecam_dlc.pupil_bot.y - eyecam_dlc.pupil_top.y;
-pupil_centerX = eyecam_dlc.pupil_left.x + 0.5 .* pupil_width;
-
-eyecam_dlc_likelihood_cell = cellfun(@(name) eyecam_dlc.(name).likelihood, fieldnames(eyecam_dlc), 'UniformOutput', false);
-eyecam_dlc_likelihood = [eyecam_dlc_likelihood_cell{:}];
-
-pupil_valid = all(eyecam_dlc_likelihood(:, :) > eyecam_DLC_params.minCertainty, 2);
-
-pupil_likelihood = eyecam_dlc_likelihood(:,4:8);
-
-uncertain_pupil_points = min(pupil_likelihood,[],2)<0.8; % only find 25 from this
-% also previous and next 5 frames
-tmp = uncertain_pupil_points;
-for t = 1:eyecam_DLC_params.surroundingBlinks
-    uncertain_pupil_points = uncertain_pupil_points | [false(t,1); tmp(1:end-t)];
-    uncertain_pupil_points = uncertain_pupil_points | [tmp(1+t:end); false(t,1)];
-end
-
-time_uncertain_pupil_points = eyecam_t(uncertain_pupil_points);
-time_blinks = eyecam_t(blinks);
-
-% more in second one still
-
-figure; hold on;
-plot(eyecam_t,zscore(eyecam_dlc.pupil_left.x))
-hold on;
-plot(eyecam_t,blinks)
-hold on;
-plot(eyecam_t,uncertain_pupil_points,'--')
-
-% save 
-all_blinks = blinks | uncertain_pupil_points;
-both = sum(blinks & uncertain_pupil_points)/sum(all_blinks);
-mine = ~blinks & uncertain_pupil_points/sum(all_blinks);
-not_mine = blinks & ~uncertain_pupil_points/sum(all_blinks);
-
-
-% % structure eyeblink - animal, day, blinks
-% loop over animals and days - add messages like 'Done animal' etc
-
 %% Load exp 
 
 animal = 'AP108';
@@ -231,19 +91,9 @@ avg_left_frontal_roi = nanmean(left_frontal_roi.trace,2);
 
 %% Get average pupil diameter from eyecam data
 
-% I think this gives an error because diameter has NaNs in it and it
-% probably gets stuck when it tries to interpolate 
-
-% pupil_diameter_stim = interp1(eyecam_t',diameter,time_stimulus);
-
-% use pupil_height_adj instead - still the same error why? 
-% - eyecam_t has nans in it too - not sure how to fix (probably to do with experiment start and end time)
-
-% simply find indices of first and last number and use in eyecam_t and
-% pupil_height_adj
 start_eyecam = find(~isnan(eyecam_t),1,'first');
 end_eyecam = find(~isnan(eyecam_t),1,'last');
-pupil_diameter_stim = interp1((eyecam_t(start_eyecam:end_eyecam))',pupil_height_adj(start_eyecam:end_eyecam),time_stimulus);
+pupil_diameter_stim = interp1((eyecam_t(start_eyecam:end_eyecam))',pupil_diameter(start_eyecam:end_eyecam),time_stimulus);
 
 % do average 
 pupil_diameter_stim_avg = nanmean(pupil_diameter_stim,2);
@@ -452,6 +302,8 @@ end
 % errorbar(x,y,err,'-s','MarkerSize',10,...
 %     'MarkerEdgeColor','red','MarkerFaceColor','red')
 
+
+
 %% Other plot
 % like this but label with stuff from correlation and do all areas
 % for correlation
@@ -497,4 +349,6 @@ for stim_idx =1:length(possible_stimuli)
     title(['R = ', num2str(R(1,2)), ' and p = ', num2str(p(1,2))])
 end
 
+%% New plot 
+% across days - mean pupil for each mouse per learning day
 
