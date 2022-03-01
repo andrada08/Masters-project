@@ -2,8 +2,9 @@
 addpath(genpath(cd));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
-addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
 %% Initial stuff
 % mice = {'AP107','AP108','AP109'};
@@ -12,8 +13,14 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 % training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
 % dates = {'2021-12-07'};
 
-mice = {'AP110', 'AP111', 'AP112'};
-passive_only_dates = {'2022-01-19','2022-01-20','2022-01-21'};
+% mice = {'AP110', 'AP111', 'AP112'};
+% passive_only_dates = {'2022-01-19','2022-01-20','2022-01-21'};
+
+% mice = {'AP113'}; %, 'AP114', 'AP115'};
+% passive_only_dates = {'2022-02-16', '2022-02-17'};
+
+mice = {'AP107'};
+passive_only_dates = {'2022-02-16', '2022-02-17', '2022-02-18'};
 
 % retinotopy for each mouse
 % mouse_idx = 1;
@@ -45,7 +52,10 @@ for day_idx=1:length(passive_only_dates)
     for mouse_idx=1:length(mice)
         animal = mice{mouse_idx};
         day = passive_only_dates{day_idx};
-        experiment = 1;
+%         protocol = 'AP_lcrGratingPassive';
+%         experiments = AP_find_experiments(animal,protocol);
+%         experiment = experiments(day_idx).experiment(end);
+        experiment = 2;
         verbose = true;
         AP_load_experiment;
         
