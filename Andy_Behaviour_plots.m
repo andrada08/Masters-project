@@ -2,7 +2,7 @@
 
 % animals = {'AP110','AP111','AP112'};
 % animals = {'AP098','AP099','AP112'};
-animals = {'AP108'};
+animals = {'AP115'};
 
 protocol = 'AP_stimWheel';
 flexible_name = true;
