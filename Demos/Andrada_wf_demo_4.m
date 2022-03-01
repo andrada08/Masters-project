@@ -4,6 +4,12 @@
 % \\zserver.cortexlab.net\Lab\Share\ajpeters\for_Andrada\widefield_alignment,
 % copy that folder to your computer
 
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
+addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
+
 
 %% Standardizing data for combining
 
@@ -24,7 +30,7 @@ AP_load_experiment;
 
 % I added the master U into your share folder, so just point this variable
 % to wherever you've stored it on your local computer: 
-master_u_fn = 'put your master U file path here';
+master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
 load(master_u_fn);
 
 % After loading above, you'll have a variable in your workspace U_master
@@ -45,6 +51,19 @@ fVdf_Umaster = ChangeU(Udf_aligned,fVdf,U_master);
 % of frames using Udf/fVdf and U_master/fVdf_Umaster and scroll through
 % them side-by-side, do they look similar?
 
+
+example_frames = 500:600;
+
+example_fluorescence_experiment = AP_svdFrameReconstruct(Udf,fVdf(:,example_frames));
+example_fluorescence_master = AP_svdFrameReconstruct(Udf_aligned,fVdf_Umaster(:,example_frames));
+
+AP_image_scroll(example_fluorescence_experiment);
+axis image;
+
+AP_image_scroll(example_fluorescence_experiment);
+axis image;
+
+
 % EXERCISE: try comparing the ROIs from the experiment/master U's to check
 % how similar they are. In order to do this, we'll need to define an ROI,
 % and use the same ROI for both reconstructions.
@@ -55,7 +74,8 @@ figure;
 imagesc(avg_im_aligned);
 AP_reference_outline('ccf_aligned',[0.5,0.5,0.5]);
 axis image off
-% roi = (use roipoly here to get an ROI)
+
+roi = roipoly();
 %
 % You should have an ROI mask now (mask is true inside ROI, false
 % outside),you can now put this into AP_svd_roi - so far you've only used
@@ -67,6 +87,11 @@ master_U_trace = AP_svd_roi(U_master,fVdf_Umaster,[],[],roi);
 % means we can swap out the experiment U for the master U and it gives us
 % functionally the same data.
 
+figure; 
+plot(experiment_U_trace, 'b')
+hold on
+plot(master_U_trace, 'r--')
+
 % Let's quantify how similar they are: calculate the fraction of explained
 % variance when moving from the master U to the experiment U.
 
@@ -77,10 +102,43 @@ master_U_trace = AP_svd_roi(U_master,fVdf_Umaster,[],[],roi);
 % calculating the explained variance. Make a plot with explained variance
 % vs. number of components.
 
+experiment_U_trace = AP_svd_roi(Udf_aligned,fVdf,[],[],roi);
+explained_variance = nan(size(U_master, 3), 1);
+for num_comp=1:size(U_master, 3)
+    master_U_trace = AP_svd_roi(U_master(:,:,1:num_comp),fVdf_Umaster(1:num_comp,:,:),[],[],roi);
+    diff_roi_traces = experiment_U_trace - master_U_trace;
+    explained_variance(num_comp) = 1 - var(diff_roi_traces)/var(experiment_U_trace);
+end
+
+figure;
+plot(1:size(U_master, 3), explained_variance, 'o')
+
+% 10 components are enough??? so little!
+
+
 % The raw data is dominated by large slow events, but we care about the
 % faster deconvolved data. Make the explained variance vs. number of
 % components plot above but this time using deconvolved data - is there a
 % difference?
+
+
+deconvolved_fVdf = AP_deconv_wf(fVdf);
+experiment_U_trace = AP_svd_roi(Udf_aligned,deconvolved_fVdf,[],[],roi);
+
+deconvolved_fVdf_Umaster = AP_deconv_wf(fVdf_Umaster);
+
+explained_variance = nan(size(U_master, 3), 1);
+for num_comp=1:size(U_master, 3)
+    master_U_trace = AP_svd_roi(U_master(:,:,1:num_comp),deconvolved_fVdf_Umaster(1:num_comp,:,:),[],[],roi);
+    diff_roi_traces = experiment_U_trace - master_U_trace;
+    explained_variance(num_comp) = 1 - var(diff_roi_traces)/var(experiment_U_trace);
+
+end
+
+% takes too long!!!
+
+figure;
+plot(1:size(U_master, 3), explained_variance, 'o')
 
 %% Combining data
 
@@ -101,7 +159,23 @@ master_U_trace = AP_svd_roi(U_master,fVdf_Umaster,[],[],roi);
 % response across mice for each day (e.g. day 1 stimulus response averaged
 % across all mice). What changes in the activity?
 
-
+animals = {'AP107','AP108'};
+% 
+% for animal_id=1:length(animals)
+%     animal = animals{animal_id};
+%     eyeblink(animal_id).animal = animal;
+%     protocol = 'AP_lcrGratingPassive';
+%     experiments = AP_find_experiments(animal,protocol);
+%     eyeblink(animal_id).blinks = nan(length(experiments),3);
+%     for day_index=1:length(experiments)
+%         day = experiments(day_index).day;
+%         eyeblink(animal_id).day{day_index} = day;
+%         experiment = experiments(day_index).experiment(end);
+%         load_parts.imaging = false;
+%         load_parts.cam = true;
+%         verbose = true;
+%         AP_load_experiment;
+%         
 
 
 
