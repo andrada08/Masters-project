@@ -127,18 +127,18 @@ experiment_U_trace = AP_svd_roi(Udf_aligned,deconvolved_fVdf,[],[],roi);
 
 deconvolved_fVdf_Umaster = AP_deconv_wf(fVdf_Umaster);
 
-explained_variance = nan(size(U_master, 3), 1);
+deconvolved_explained_variance = nan(size(U_master, 3), 1);
 for num_comp=1:size(U_master, 3)
     master_U_trace = AP_svd_roi(U_master(:,:,1:num_comp),deconvolved_fVdf_Umaster(1:num_comp,:,:),[],[],roi);
     diff_roi_traces = experiment_U_trace - master_U_trace;
-    explained_variance(num_comp) = 1 - var(diff_roi_traces)/var(experiment_U_trace);
+    deconvolved_explained_variance(num_comp) = 1 - var(diff_roi_traces)/var(experiment_U_trace);
 
 end
 
 % takes too long!!!
 
 figure;
-plot(1:size(U_master, 3), explained_variance, 'o')
+plot(1:size(U_master, 3), deconvolved_explained_variance, 'o')
 
 %% Combining data
 
@@ -154,34 +154,150 @@ plot(1:size(U_master, 3), explained_variance, 'o')
 % 4) grab activity aligned to each stimulus
 % 5) store the the activity and trial information, move to next loop
 % 6) save
-%
+
+animals = {'AP107'} %,'AP108', 'AP109'};
+
+master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
+load(master_u_fn);
+
+master_activity = struct;
+
+% create matrix of times for movie
+timestep = 0.01;
+start_time = -0.5;
+end_time = 1;
+timevec = [start_time:timestep:end_time];
+stim_frame = (-start_time)*(1/timestep)+1;
+
+
+master_activity.timestep = timestep;
+master_activity.start_time = start_time;
+master_activity.end_time = end_time;
+master_activity.stim_frame = stim_frame;
+master_activity.timevec = timevec;
+
+for animal_id=1:length(animals)
+    animal = animals{animal_id};
+    master_activity(animal_id).animal = animal;
+    protocol = 'AP_lcrGratingPassive';
+    experiments = AP_find_experiments(animal,protocol);
+    for day_index=1:length(experiments)
+        day = experiments(day_index).day;
+        master_activity(animal_id).day{day_index} = day;
+        experiment = experiments(day_index).experiment(end);
+        % load experiment
+        load_parts.imaging = true;
+        load_parts.cam = true;
+        verbose = true;
+        AP_load_experiment;
+        
+        % find value of stimulus per trial
+        trialStimulusValue = signals_events.stimAzimuthValues/90 .* signals_events.stimContrastValues;
+        
+        % align U's
+        Udf_aligned = AP_align_widefield(Udf,animal,day);
+        % get corresponding V's
+        fVdf_Umaster = ChangeU(Udf_aligned,fVdf,U_master);
+        
+               
+        % find activity for the time defined
+        time_stimulus = stimOn_times+timevec;
+        all_stim_act = interp1(frame_t,fVdf_Umaster',time_stimulus);
+        all_stim_act = permute(all_stim_act, [3,2,1]);
+        all_stim_act = all_stim_act - all_stim_act(:,stim_frame,:);
+        
+        % temp ------------------------------------------------------------------------------------------------
+%         
+%         temp_all_stim_avg_act = nan(size(all_stim_act,1),size(all_stim_act,2),length(possible_stimuli));
+%         % completed_trialStimulusValue = trialStimulusValue(1:n_trials);
+%         
+%         for stim_idx =1:length(possible_stimuli)
+%             this_stim_act = all_stim_act(:,:,trialStimulusValue==possible_stimuli(stim_idx));
+%             temp_all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
+%         end
+%         
+%         temp_all_stim_avg_act = temp_all_stim_avg_act - temp_all_stim_avg_act(:,stim_frame,:);
+%         
+%         deconvolved_all_stim_avg_act = AP_deconv_wf(temp_all_stim_avg_act, [], 1/timestep);
+%  
+%         % get fluoresence
+%         all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(U_master,deconvolved_all_stim_avg_act);
+%         
+%         % video
+%         AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
+%         axis image;
+        
+        % save in struct
+        master_activity(animal_id).stim_activity{day_index} = all_stim_act;
+        master_activity(animal_id).trial_id{day_index} = trialStimulusValue;
+    end
+    disp(['Done with ' animal])
+end
+
+disp('Done all')
+
+% Save 
+save('master_activity.mat', 'master_activity', '-v7.3')
+disp('Saved')
+
+
+%% Load and plot
 % Then write some code to load in the data and plot the average stimulus
 % response across mice for each day (e.g. day 1 stimulus response averaged
 % across all mice). What changes in the activity?
 
-animals = {'AP107','AP108'};
-% 
-% for animal_id=1:length(animals)
-%     animal = animals{animal_id};
-%     eyeblink(animal_id).animal = animal;
-%     protocol = 'AP_lcrGratingPassive';
-%     experiments = AP_find_experiments(animal,protocol);
-%     eyeblink(animal_id).blinks = nan(length(experiments),3);
-%     for day_index=1:length(experiments)
-%         day = experiments(day_index).day;
-%         eyeblink(animal_id).day{day_index} = day;
-%         experiment = experiments(day_index).experiment(end);
-%         load_parts.imaging = false;
-%         load_parts.cam = true;
-%         verbose = true;
-%         AP_load_experiment;
-%         
+load('master_activity.mat');
+
+master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
+load(master_u_fn);
+
+animals = {master_activity.animal};
+
+timestep = master_activity.timestep;
+start_time = master_activity.start_time;
+end_time = master_activity.end_time;
+stim_frame = master_activity.stim_frame;
+timevec = master_activity.timevec;
+
+% do something to get the min/max number - though realistically mice all
+% train on simple task for two weeks
+
+num_days = length(master_activity(1).day);
+possible_stimuli = [-1 0 1];
+
+% to have dim for avg activity from size of first master activity
+stim_act = master_activity(1).stim_activity{1};
+all_stim_avg_act = nan(size(stim_act,1),size(stim_act,2),length(possible_stimuli));
+
+for day_idx=1:num_days
+    all_stim_avg_act = nan(size(stim_act,1),size(stim_act,2),length(possible_stimuli));
+    for stim_idx =1:length(possible_stimuli)
+        this_stim_act = [];
+        for animal_id=1:length(animals)
+            stim_act = master_activity(animal_id).stim_activity{day_idx};
+            trialStimulusValue = master_activity(animal_id).trial_id{day_idx};
+            this_stim_act = cat(3, this_stim_act, stim_act(:,:,trialStimulusValue==possible_stimuli(stim_idx)));
+        end
+        
+        all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);    
+    end
+    all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,stim_frame,:);
+    
+    deconvolved_all_stim_avg_act = AP_deconv_wf(all_stim_avg_act, [], 1/timestep);
+    
+    % get fluoresence
+    all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(U_master,deconvolved_all_stim_avg_act);
+    
+    % video
+    AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
+    axis image;
+end
 
 
-
-
-
-
+% do videos for code where save for first day and compare to passive stim
+% stuff - looks ok not the same but ok (because one is for master u and v)
+% - with normal V and U 
+% - then master ones 
 
 
 

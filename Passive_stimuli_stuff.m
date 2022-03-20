@@ -1,5 +1,5 @@
 %% Paths to stuff
-addpath(genpath(cd));
+
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\npy-matlab'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\widefield'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
@@ -7,20 +7,7 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
 %% Initial stuff
-% mice = {'AP107','AP108','AP109'};
-% all_dates = {'2021-11-23','2021-11-24','2021-12-07','2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
-% passive_only_dates = {'2021-11-23','2021-11-24','2021-12-07'};
-% training_dates = {'2021-12-08','2021-12-09','2021-12-10','2021-12-11','2021-12-12','2021-12-13','2021-12-14','2021-12-15'};
-% dates = {'2021-12-07'};
-
-% mice = {'AP110', 'AP111', 'AP112'};
-% passive_only_dates = {'2022-01-19','2022-01-20','2022-01-21'};
-
-% mice = {'AP113'}; %, 'AP114', 'AP115'};
-% passive_only_dates = {'2022-02-16', '2022-02-17'};
-
-mice = {'AP107'};
-passive_only_dates = {'2022-02-16', '2022-02-17', '2022-02-18'};
+mice = {'AP113', 'AP114', 'AP115'};
 
 % retinotopy for each mouse
 % mouse_idx = 1;
@@ -48,14 +35,13 @@ passive_only_dates = {'2022-02-16', '2022-02-17', '2022-02-18'};
 % %             experiment = 1;
 % %         end
 
-for day_idx=1:length(passive_only_dates)
-    for mouse_idx=1:length(mice)
-        animal = mice{mouse_idx};
-        day = passive_only_dates{day_idx};
-%         protocol = 'AP_lcrGratingPassive';
-%         experiments = AP_find_experiments(animal,protocol);
-%         experiment = experiments(day_idx).experiment(end);
-        experiment = 2;
+for mouse_idx=1:length(mice)
+    animal = mice{mouse_idx};
+    protocol = 'AP_lcrGratingPassive';
+    experiments = AP_find_experiments(animal,protocol);
+    for day_idx=11:12 %1:length(experiments)
+        day = experiments(day_idx).day;
+        experiment = experiments(day_idx).experiment(end);
         verbose = true;
         AP_load_experiment;
         
@@ -84,8 +70,8 @@ for day_idx=1:length(passive_only_dates)
         
         % create matrix of times for movie
         timestep = 0.01;
-        start_time = -2;
-        end_time = 3;
+        start_time = -0.5;
+        end_time = 1;
         timevec = [start_time:timestep:end_time];
         
         stim_frame = (-start_time)*(1/timestep)+1;
@@ -95,6 +81,7 @@ for day_idx=1:length(passive_only_dates)
         % find activity for above time
         all_stim_act = interp1(frame_t,fVdf',time_stimulus);
         all_stim_act = permute(all_stim_act, [3,2,1]);
+        
         
         % calculate average act for each stimulus
         all_stim_avg_act = nan(size(all_stim_act,1),size(all_stim_act,2),length(possible_stimuli));
@@ -107,8 +94,10 @@ for day_idx=1:length(passive_only_dates)
         
         all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,stim_frame,:);
         
+        deconvolved_all_stim_avg_act = AP_deconv_wf(all_stim_avg_act, [], 1/timestep);
+ 
         % get fluoresence
-        all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,all_stim_avg_act);
+        all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(Udf,deconvolved_all_stim_avg_act);
         
         % video
         AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
