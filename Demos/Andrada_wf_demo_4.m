@@ -198,38 +198,43 @@ for animal_id=1:length(animals)
         Udf_aligned = AP_align_widefield(Udf,animal,day);
         % get corresponding V's
         fVdf_Umaster = ChangeU(Udf_aligned,fVdf,U_master);
-        
-               
+                       
         % find activity for the time defined
         time_stimulus = stimOn_times+timevec;
         all_stim_act = interp1(frame_t,fVdf_Umaster',time_stimulus);
         all_stim_act = permute(all_stim_act, [3,2,1]);
         all_stim_act = all_stim_act - all_stim_act(:,stim_frame,:);
         
-        % temp ------------------------------------------------------------------------------------------------
-%         
-%         temp_all_stim_avg_act = nan(size(all_stim_act,1),size(all_stim_act,2),length(possible_stimuli));
-%         % completed_trialStimulusValue = trialStimulusValue(1:n_trials);
-%         
-%         for stim_idx =1:length(possible_stimuli)
-%             this_stim_act = all_stim_act(:,:,trialStimulusValue==possible_stimuli(stim_idx));
-%             temp_all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
-%         end
-%         
-%         temp_all_stim_avg_act = temp_all_stim_avg_act - temp_all_stim_avg_act(:,stim_frame,:);
-%         
-%         deconvolved_all_stim_avg_act = AP_deconv_wf(temp_all_stim_avg_act, [], 1/timestep);
-%  
-%         % get fluoresence
-%         all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(U_master,deconvolved_all_stim_avg_act);
-%         
-%         % video
-%         AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
-%         axis image;
+        % define number of components
+        num_comp = 200;
         
         % save in struct
-        master_activity(animal_id).stim_activity{day_index} = all_stim_act;
+        master_activity(animal_id).num_comp{day_index} = num_comp;
+        master_activity(animal_id).stim_activity{day_index} = all_stim_act(1:num_comp,:,:);
         master_activity(animal_id).trial_id{day_index} = trialStimulusValue;
+        
+        % other trial information to save
+        
+        % wheel position
+%         all_stim_wheel_position = interp1(Timeline.rawDAQTimestamps,wheel_position,time_stimulus);
+%         all_stim_wheel_position = permute(all_stim_wheel_position, [2,1]);
+        
+%         % all moves
+%         tmp_move = [0; diff(wheel_move)];
+%         all_move_frames = find(tmp_move==1);
+%         all_move_times = t(all_move_frames);
+        
+        % stim aligned wheel move
+        stim_wheel_move = interp1(Timeline.rawDAQTimestamps,+wheel_move,time_stimulus');
+        master_activity(animal_id).stim_wheel_move{day_index} = stim_wheel_move;
+        
+        % move after stim times
+%         moveOn_times = all_move_times(cell2mat(arrayfun(@(X) find(all_move_times>X,1,'first'),stimOn_times', 'UniformOutput', 0)));
+%         moveOn_frames = cell2mat(arrayfun(@(X) find(t==X,1),moveOn_times, 'UniformOutput', 0));
+%         
+        % move offsets - maybe? - ask Andy - diff(wheel_move) = -1 - all
+        % move offsets and then find first after moveOn_time
+
     end
     disp(['Done with ' animal])
 end
@@ -258,6 +263,7 @@ start_time = master_activity.start_time;
 end_time = master_activity.end_time;
 stim_frame = master_activity.stim_frame;
 timevec = master_activity.timevec;
+num_comp = master_activity.num_comp;
 
 % do something to get the min/max number - though realistically mice all
 % train on simple task for two weeks
@@ -276,9 +282,11 @@ for day_idx=1:num_days
         for animal_id=1:length(animals)
             stim_act = master_activity(animal_id).stim_activity{day_idx};
             trialStimulusValue = master_activity(animal_id).trial_id{day_idx};
-            this_stim_act = cat(3, this_stim_act, stim_act(:,:,trialStimulusValue==possible_stimuli(stim_idx)));
+            stim_wheel_move = master_activity(animal_id).stim_wheel_move{day_idx};
+            no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+            this_mouse_stim_act = stim_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+            this_stim_act = cat(3, this_stim_act, this_mouse_stim_act);
         end
-        
         all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);    
     end
     all_stim_avg_act = all_stim_avg_act - all_stim_avg_act(:,stim_frame,:);
@@ -286,7 +294,7 @@ for day_idx=1:num_days
     deconvolved_all_stim_avg_act = AP_deconv_wf(all_stim_avg_act, [], 1/timestep);
     
     % get fluoresence
-    all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(U_master,deconvolved_all_stim_avg_act);
+    all_stim_interval_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),deconvolved_all_stim_avg_act);
     
     % video
     AP_image_scroll(all_stim_interval_avg_fluorescence,timevec);
@@ -300,7 +308,42 @@ end
 % - then master ones 
 
 
+%% Plots
+
+left_stim_front_roi = roi;
+left_stim_vis_roi = roi;
+
+right_stim_front_roi = roi;
+right_stim_vis_roi=roi;
 
 
+figure;
+plot(timevec, right_stim_front_roi.trace(3,:)')
+hold on
+plot(timevec, left_stim_front_roi.trace(1,:)','-r')
+hold on
+xline(0)
+legend('Right Stim', 'Left Stim')
+title('Activity in medial bit of MOs')
 
+figure;
+plot(timevec, left_stim_vis_roi.trace(1,:)')
+hold on
+plot(timevec, left_stim_front_roi.trace(1,:)','-r')
+hold on
+xline(0)
+legend('V1', 'Front')
+title('Activity V1 and frontal for left stim')
 
+figure;
+plot(timevec, right_stim_vis_roi.trace(3,:)')
+hold on
+plot(timevec, right_stim_front_roi.trace(3,:)','-r')
+hold on
+xline(0)
+legend('V1', 'Front')
+title('Activity V1 and frontal for right stim')
+
+%% ROIs
+
+% do some ROIs for different days
