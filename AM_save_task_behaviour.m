@@ -1,10 +1,10 @@
 %% Save task behaviour for AP107
 
-animals = {'AP107'}; %,'AP108', 'AP109'};
+animals = {'AP107','AP108', 'AP113', 'AP114', 'AP115'};
 
 behaviour = struct;
 
-% create matrix of times for movie
+% create matrix of times 
 timestep = 0.01;
 start_time = -2;
 end_time = 2;
@@ -19,13 +19,30 @@ behaviour.timevec = timevec;
 for animal_id=1:length(animals)
     animal = animals{animal_id};
     behaviour(animal_id).animal = animal;
+    
+    % find muscimol days and save
+    protocol = 'AP_sparseNoise';
+    experiments = AP_find_experiments(animal,protocol);
+    muscimol_days = {experiments(2:end).day};
+    behaviour(animal_id).muscimol_days = muscimol_days;
+    
+    % find task days    
     protocol = 'AP_stimWheel';
     flexible_name = true;
     experiments = AP_find_experiments(animal,protocol,flexible_name);
     for day_index=1:length(experiments)
         day = experiments(day_index).day;
+                
+%         % skip if it's a muscimol day
+%         is_muscimol = find(contains(muscimol_days,day));
+%         if is_muscimol
+%             continue
+%         end
+
+        % save if it's not
         behaviour(animal_id).day{day_index} = day;
         experiment = experiments(day_index).experiment(end);
+        
         % load experiment
         load_parts.imaging = false;
         load_parts.cam = true;
@@ -71,17 +88,30 @@ for animal_id=1:length(animals)
         stim_move_off_times = all_move_off_times(cell2mat(arrayfun(@(X) find(all_move_on_times>X,1,'first'),stim_move_on_times, 'UniformOutput', 0)));
         behaviour(animal_id).stim_move_off_times{day_index} = stim_move_off_times;
         
+        % reaction times
+        reaction_times = stim_move_on_times - stimOn_times';
+        behaviour(animal_id).reaction_times{day_index} = reaction_times;
+        
     end
+    
+    % find indices for days of reversal task
+    protocol = 'AP_stimWheelLeftReverse';
+    experiments = AP_find_experiments(animal,protocol);
+    reversal_task_days = {experiments.day};
+    reversal_task_days_mask = ismember(behaviour(animal_id).day, reversal_task_days);
+    behaviour(animal_id).reversal_task_days_mask = reversal_task_days_mask;
+    
+    % find indices for days for original task
+    original_task_days_mask = (~ismember(behaviour(animal_id).day, reversal_task_days))&(~ismember(behaviour(animal_id).day, muscimol_days));
+    behaviour(animal_id).original_task_days_mask = original_task_days_mask;
+ 
     disp(['Done with ' animal])
 end
 
 disp('Done all')
 
 % Save 
-save('AP107_behaviour.mat', 'behaviour', '-v7.3')
+save('all_mice_behaviour.mat', 'behaviour', '-v7.3')
 disp('Saved')
 
 
-%% Load and plot reaction times 
-
-% look through wf_demo_3 for this

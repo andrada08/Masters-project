@@ -6,7 +6,9 @@ addpath(genpath('C:\Users\Andrada\Documents\GitHub\Lilrig'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\PupilDetection_DLC'));
 addpath(genpath('C:\Users\Andrada\Documents\GitHub\AP_scripts_cortexlab'));
 
-animals = {'AP100','AP101','AP103','AP104','AP105','AP106','AP107','AP108','AP109'};
+% animals = {'AP100','AP101','AP103','AP104','AP105','AP106','AP107','AP108','AP109'};
+
+animals = {'AP107','AP108', 'AP109', 'AP110', 'AP111', 'AP112', 'AP113', 'AP114', 'AP115'};
 
 eyeblink = struct;
 

@@ -176,6 +176,10 @@ master_activity.end_time = end_time;
 master_activity.stim_frame = stim_frame;
 master_activity.timevec = timevec;
 
+% define number of components
+num_comp = 200;
+master_activity(animal_id).num_comp = 200;
+
 for animal_id=1:length(animals)
     animal = animals{animal_id};
     master_activity(animal_id).animal = animal;
@@ -205,9 +209,7 @@ for animal_id=1:length(animals)
         all_stim_act = permute(all_stim_act, [3,2,1]);
         all_stim_act = all_stim_act - all_stim_act(:,stim_frame,:);
         
-        % define number of components
-        num_comp = 200;
-        
+               
         % save in struct
         master_activity(animal_id).num_comp{day_index} = num_comp;
         master_activity(animal_id).stim_activity{day_index} = all_stim_act(1:num_comp,:,:);
