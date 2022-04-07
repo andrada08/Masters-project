@@ -159,6 +159,114 @@ disp('Done all')
 save('task_master_activity.mat', 'task_master_activity', '-v7.3')
 disp('Saved')
 
+%% Get and save stim + move task fluorescence
+
+animals = {'AP107','AP108', 'AP113', 'AP114', 'AP115'};
+
+master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
+load(master_u_fn);
+
+task_master_activity = struct;
+
+% create matrix of times for movie
+timestep = 0.01;
+start_time = -0.5;
+end_time = 1;
+timevec = [start_time:timestep:end_time];
+stim_frame = (-start_time)*(1/timestep)+1;
+
+
+task_master_activity.timestep = timestep;
+task_master_activity.start_time = start_time;
+task_master_activity.end_time = end_time;
+task_master_activity.stim_frame = stim_frame;
+task_master_activity.timevec = timevec;
+
+% define number of components
+num_comp = 200;
+task_master_activity.num_comp = 200;
+
+for animal_id=2:length(animals)
+    animal = animals{animal_id};
+    task_master_activity(animal_id).animal = animal;
+    
+    % find task days
+    protocol = 'AP_stimWheel';
+    flexible_name = true;
+    experiments = AP_find_experiments(animal,protocol,flexible_name);
+    for day_index=1:length({experiments.day})
+        day = experiments(day_index).day;
+        task_master_activity(animal_id).day{day_index} = day;
+        
+        % find task experiment
+        experiment = experiments(day_index).experiment(end);
+        
+        % load experiment
+        load_parts.imaging = true;
+        load_parts.cam = true;
+        verbose = true;
+        AP_load_experiment;
+        
+        % find value of stimulus per trial
+        trialStimulusValue = signals_events.trialContrastValues .* signals_events.trialSideValues;
+        
+        % align U's
+        Udf_aligned = AP_align_widefield(Udf,animal,day);
+        % get corresponding V's
+        fVdf_Umaster = ChangeU(Udf_aligned,fVdf,U_master);
+                       
+        % find activity for the time defined
+        time_stimulus = stimOn_times+timevec;
+        all_stim_act = interp1(frame_t,fVdf_Umaster',time_stimulus);
+        all_stim_act = permute(all_stim_act, [3,2,1]);
+        all_stim_act = all_stim_act - all_stim_act(:,stim_frame,:);
+               
+        % save in struct
+        task_master_activity(animal_id).stim_activity{day_index} = all_stim_act(1:num_comp,:,:);
+        task_master_activity(animal_id).trial_id{day_index} = trialStimulusValue;
+        
+        % stim aligned wheel move
+        stim_wheel_move = interp1(Timeline.rawDAQTimestamps,+wheel_move,time_stimulus');
+        task_master_activity(animal_id).stim_wheel_move{day_index} = stim_wheel_move;
+        
+        % use diff to get all movement onsets
+        tmp_move = [0; diff(wheel_move)];
+        all_move_frames = find(tmp_move==1);
+        t = Timeline.rawDAQTimestamps;
+        all_move_times = t(all_move_frames);
+        
+        % find trial move times
+        moveOn_times = all_move_times(cell2mat(arrayfun(@(X) find(all_move_times>X,1,'first'),stimOn_times', 'UniformOutput', 0)));
+
+        % get activity for window around all movement onsets
+ %       move_frame = (-start_time)*(1/timestep)+1;
+%         task_master_activity(animal_id).move_frame = move_frame;       
+%         
+        time_move = moveOn_times'+timevec;
+        
+        all_move_act = interp1(frame_t,fVdf_Umaster',time_move);
+        all_move_act = permute(all_move_act, [3,2,1]);
+        all_move_act = all_move_act - all_move_act(:,move_frame,:);
+        
+        % save in struct
+        task_master_activity(animal_id).move_activity{day_index} = all_move_act(1:num_comp,:,:);
+        
+        % save which move it is?
+        correct_index = find(signals_events.hitValues==1);
+        turnValues = signals_events.trialSideValues;
+        turnValues(correct_index)= -signals_events.trialSideValues(correct_index);
+        task_master_activity(animal_id).turnValues{day_index} = turnValues;
+        
+    end
+    disp(['Done with ' animal])
+end
+
+disp('Done all')
+
+% Save 
+save('task_master_activity.mat', 'task_master_activity', '-v7.3')
+disp('Saved')
+
 %% Get all avg fluorescence and save in struct
 
 % load activity from passive

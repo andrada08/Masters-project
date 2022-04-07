@@ -1142,7 +1142,6 @@ hold on;
 plot(timevec, all_right_frontal_ROIs');
 legend(animals)
 
-
 % avg plot for non-learners
 
 avg_all_left_frontal_ROIs = mean(all_left_frontal_ROIs(2:end,:), 1);
@@ -1188,471 +1187,430 @@ ylim([-1.5*10^-3 3*10^-3])
 legend({'Left learner','Left non-learners', 'Right learner', 'Right non-learners'})
 
 
-%% TASK FLUORESCENCE --------------------------------------------------------------
+%% - AP107 like task ROI plot
 
-%% To see what ROI window to use
-% AP107
-% load activity from task
-load('task_master_activity.mat');
-animals = {task_master_activity.animal};
+% load activity from passive
+load('passive_master_activity.mat');
+animals = {passive_master_activity.animal};
 
-timestep = task_master_activity.timestep;
-start_time = task_master_activity.start_time;
-end_time = task_master_activity.end_time;
-stim_frame = task_master_activity.stim_frame;
-timevec = task_master_activity.timevec;
-num_comp = task_master_activity.num_comp;
-
-% AP107
-animal_id = 1;
+timestep = passive_master_activity.timestep;
+start_time = passive_master_activity.start_time;
+end_time = passive_master_activity.end_time;
+stim_frame = passive_master_activity.stim_frame;
+timevec = passive_master_activity.timevec;
+num_comp = passive_master_activity.num_comp;
 
 % load ROI masks
 load('ROIs.mat');
+all_ROIs = fieldnames(roi);
 
 % load master U
 master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
 load(master_u_fn);
-
-% frontal left ROIs for each day
-
-% get day indexes for original
-all_training_days = task_master_activity(animal_id).day;
-original_task_days_mask = task_master_activity(animal_id).original_task_days_mask;
-muscimol_days_mask = task_master_activity(animal_id).muscimol_days_mask;
-original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
-
-frontal_left_avg_ROI = nan(length(original_task_day_idx),length(timevec));
-for day_idx=original_task_day_idx
-    stim_act = task_master_activity(animal_id).stim_activity{day_idx};
-    deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
-    deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
-    
-    trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-    % only completed trials
-    trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
-    
-    right_stim_act = deconvolved_stim_avg_act(:,:,trialStimulusValue==1);
-    frontal_left = AP_svd_roi(U_master(:,:,1:num_comp),right_stim_act,[],[],roi.frontal_left);
-    frontal_left = permute(frontal_left,[2,3,1]);
-    frontal_left_avg_ROI(day_idx-original_task_day_idx(1)+1,:) = mean(frontal_left,2);   
-end
-
-roi_colors = brewermap(length(original_task_day_idx),'Reds');
-figure; title('Task original each day left ROI');
-hold on;
-set(gca,'ColorOrder',roi_colors)
-plot(timevec,frontal_left_avg_ROI);
-
-% frontal right ROIs
-
-% get day indexes
-all_training_days = task_master_activity(animal_id).day;
-reversal_task_days_mask = task_master_activity(animal_id).reversal_task_days_mask;
-reversal_task_day_idx = find(reversal_task_days_mask);
-
-frontal_right_avg_ROI = nan(length(reversal_task_day_idx),length(timevec));
-for day_idx=reversal_task_day_idx
-    stim_act = task_master_activity(animal_id).stim_activity{day_idx};
-    deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
-    deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
-    
-    trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-    % only completed trials
-    trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
-    
-    right_stim_act = deconvolved_stim_avg_act(:,:,trialStimulusValue==-1);
-    frontal_right = AP_svd_roi(U_master(:,:,1:num_comp),right_stim_act,[],[],roi.frontal_right);
-    frontal_right = permute(frontal_right,[2,3,1]);
-    frontal_right_avg_ROI(day_idx-reversal_task_day_idx(1)+1,:) = mean(frontal_right,2);   
-end
-
-roi_colors = brewermap(length(reversal_task_day_idx),'Blues');
-figure; title('Task reversal each day right ROI');
-hold on;
-set(gca,'ColorOrder',roi_colors)
-plot(timevec,frontal_right_avg_ROI);
-
-
-%% choose time window
-% averaging window
-small_window = [0.05 0.3];
-small_window_idx = timevec>=small_window(1)&timevec<=small_window(2);
-
-% frontal left
-avg_frontal_left = nan(1,length(original_task_day_idx));
-for day_idx=original_task_day_idx
-    this_idx = day_idx-original_task_day_idx(1)+1;
-    avg_frontal_left(this_idx) = mean(frontal_left_avg_ROI(this_idx,small_window_idx),2);
-end
-
-% frontal right
-avg_frontal_right = nan(1,length(reversal_task_day_idx));
-for day_idx=reversal_task_day_idx
-    this_idx = day_idx-reversal_task_day_idx(1)+1;
-    avg_frontal_right(this_idx) = mean(frontal_right_avg_ROI(this_idx,small_window_idx),2);
-end
-
-% plot average fluorescence
-figure;
-plot(1:length(original_task_day_idx), avg_frontal_left, '-o')
-hold on;
-plot(1:length(reversal_task_day_idx),avg_frontal_right, 'b-o')
-title('AP107 mPFC avg task fluorescence')
-xlabel('Training day')
-ylabel('Avg fluorescence 5-300 ms after stim onset')
-legend({'Original', 'Reversal'})
-
-%% Avg picture with scroll through days
-
-% load activity from task
-load('task_master_activity.mat');
-animals = {task_master_activity.animal};
-
-timestep = task_master_activity.timestep;
-start_time = task_master_activity.start_time;
-end_time = task_master_activity.end_time;
-stim_frame = task_master_activity.stim_frame;
-timevec = task_master_activity.timevec;
-num_comp = task_master_activity.num_comp;
 
 % choose averaging window
-small_window = [0.05 0.3];
+small_window = [0.05 0.2];
 small_window_idx = timevec>=small_window(1)&timevec<=small_window(2);
-
-% load master U
-master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
-load(master_u_fn);
 
 % possible stims
 possible_stimuli = [-1 0 1];
 
-for animal_id=1:length(animals)
-    training_days = task_master_activity(animal_id).day;
-    muscimol_days = training_days(task_master_activity(animal_id).muscimol_days_mask);
-        
-    % initialize avg_act over window
-    all_window_avg_act = nan(num_comp, length(training_days));
-    
-    for day_idx=1:length(training_days)
-        day = training_days(day_idx);
-        
-        % skip if it's a muscimol day
-        is_muscimol = find(contains(muscimol_days,day));
-        if is_muscimol
-            continue
-        end
-        
-        % get stim act for this animal and day
-        stim_act = task_master_activity(animal_id).stim_activity{day_idx};
-        
-        % load trial information and wheel move
-        trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-        % only completed trials
-        trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
-        
-        stim_wheel_move = task_master_activity(animal_id).stim_wheel_move{day_idx};
-        
-        % find average activity for each stimulus
-        stim_avg_act = nanmean(stim_act,3);
-        stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
-        
-        % deconvolve
-        deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
-        
-        % average across chosen window
-        window_avg_act = mean(deconvolved_stim_avg_act(:,small_window_idx,:),2);
-        all_window_avg_act(:,day_idx,:) = window_avg_act;
-    end
-    
-    % get fluoresence
-    all_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),all_window_avg_act);
-    %task_master_activity(animal_id).all_avg_fluorescence = all_avg_fluorescence;
-    
-    % video
-    AP_image_scroll(all_avg_fluorescence,1:length(task_master_activity(animal_id).day)); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-    axis image;
-end
-
-% save the avg_fluorescence pics in struct to load easily
-%save('task_master_activity.mat', 'task_master_activity', '-v7.3')
-
-
-%% Scroll movie for pre-learning (first:day) and post-learning (day:end)
-
-%% - Original task
+%% original task
 
 % define learned day
 learned_day_idx = 5;
 
-%% -- pre-learning
-all_mice_avg_act = nan(num_comp,length(timevec),length(animals));
+% initialize frontal ROIs
+original_left_frontal_ROIs = nan(length(animals),length(timevec));
+original_right_frontal_ROIs = nan(length(animals),length(timevec));
 
-for animal_id = 1:length(animals)
+for animal_id=1:length(animals)
+    
     % get day indexes
-    all_training_days = task_master_activity(animal_id).day;
-    original_task_days_mask = task_master_activity(animal_id).original_task_days_mask;
-    muscimol_days_mask = task_master_activity(animal_id).muscimol_days_mask;
-    original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
-    
-    % find which day the learned day is in whole dataset
-    these_day_idx = original_task_day_idx(1:learned_day_idx-1);
-    
-    this_mouse_act = nan(num_comp, length(timevec), length(these_day_idx));
-    for day_idx = these_day_idx
-        % get stim act for this animal and day
-        stim_act = task_master_activity(animal_id).stim_activity{day_idx};
-        
-        % load trial information and wheel move
-        trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-        % only completed trials
-        trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
-        
-        stim_wheel_move = task_master_activity(animal_id).stim_wheel_move{day_idx};
-        
-        % find average activity for each stimulus
-        stim_avg_act = nanmean(stim_act,3);
-        stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
-        
-        % deconvolve
-        deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
-        
-        this_mouse_act(:,:,day_idx-these_day_idx(1)+1) = deconvolved_stim_avg_act;
-    end
-    
-    all_mice_avg_act(:,:,animal_id) = mean(this_mouse_act,3);
-end
-
-% get fluorescence
-pre_learned_avg_act = mean(all_mice_avg_act,3);
-pre_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),pre_learned_avg_act);
-
-% video
-AP_image_scroll(pre_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-axis image;
-
-%% -- post-learning
-all_mice_avg_act = nan(num_comp,length(timevec),length(animals));
-
-for animal_id = 1:length(animals)
-    % get day indexes
-    all_training_days = task_master_activity(animal_id).day;
-    original_task_days_mask = task_master_activity(animal_id).original_task_days_mask;
-    muscimol_days_mask = task_master_activity(animal_id).muscimol_days_mask;
+    all_training_days = passive_master_activity(animal_id).day;
+    original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
     original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
     
     % find which day the learned day is in whole dataset
     these_day_idx = original_task_day_idx(learned_day_idx:end);
     
-    this_mouse_act = nan(num_comp, length(timevec), length(these_day_idx));
+    % initialize empty ROIs thing
+    this_left_ROI = nan(length(timevec),length(these_day_idx));
+    this_right_ROI = nan(length(timevec),length(these_day_idx));
+    
+    % go through all learned days
     for day_idx = these_day_idx
-        % get stim act for this animal and day
-        stim_act = task_master_activity(animal_id).stim_activity{day_idx};
+        day = all_training_days{day_idx};
         
-        % load trial information and wheel move
-        trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-        % only completed trials
-        trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
         
-        stim_wheel_move = task_master_activity(animal_id).stim_wheel_move{day_idx};
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
         
-        % find average activity for each stimulus
-        stim_avg_act = nanmean(stim_act,3);
-        stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
+        % take no move trials and identify stim_id = 1
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
         
-        % deconvolve
-        deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
+        % trials with no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
         
-        this_mouse_act(:,:,day_idx-these_day_idx(1)+1) = deconvolved_stim_avg_act;
+        % right stim act
+        right_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==1);
+        
+        % get avg left ROI for right stim
+        left_ROI = AP_svd_roi(U_master(:,:,1:num_comp),right_stim_act,[],[],roi.frontal_left);
+        left_ROI = permute(left_ROI,[2,3,1]);
+        this_left_ROI(:,day_idx-these_day_idx(1)+1) = mean(left_ROI,2);
+        
+        % get avg right ROI for right stim
+        right_ROI = AP_svd_roi(U_master(:,:,1:num_comp),right_stim_act,[],[],roi.frontal_right);
+        right_ROI = permute(right_ROI,[2,3,1]);
+        this_right_ROI(:,day_idx-these_day_idx(1)+1) = mean(right_ROI,2);
     end
     
-    all_mice_avg_act(:,:,animal_id) = mean(this_mouse_act,3);
+    original_left_frontal_ROIs(animal_id,:) = mean(this_left_ROI,2);
+    original_right_frontal_ROIs(animal_id,:) = mean(this_right_ROI,2);
 end
 
-% get fluorescence
-post_learned_avg_act = mean(all_mice_avg_act,3);
-post_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),post_learned_avg_act);
-
-% video
-AP_image_scroll(post_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-axis image;
-
-%% - Reversal task
+% reversal task
 
 % define learned day
 learned_day_idx = 7;
 
-%% - non-learners
-%% -- pre-learning
-all_mice_avg_act = nan(num_comp,length(timevec),length(animals));
+% initialize frontal ROIs
+reversal_left_frontal_ROIs = nan(length(animals),length(timevec));
+reversal_right_frontal_ROIs = nan(length(animals),length(timevec));
 
-for animal_id = 2:length(animals)
+for animal_id=1:length(animals)
+    
     % get day indexes
-    all_training_days = task_master_activity(animal_id).day;
-    reversal_task_days_mask = task_master_activity(animal_id).reversal_task_days_mask;
-    reversal_task_day_idx = find(reversal_task_days_mask);
-    
-    % find which day the learned day is in whole dataset
-    these_day_idx = reversal_task_day_idx(1:learned_day_idx-1);
-    
-    this_mouse_act = nan(num_comp, length(timevec), length(these_day_idx));
-    for day_idx = these_day_idx
-        % get stim act for this animal and day
-        stim_act = task_master_activity(animal_id).stim_activity{day_idx};
-        
-        % load trial information and wheel move
-        trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-        % only completed trials
-        trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
-        
-        stim_wheel_move = task_master_activity(animal_id).stim_wheel_move{day_idx};
-        
-        % find average activity for each stimulus
-        stim_avg_act = nanmean(stim_act,3);
-        stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
-        
-        % deconvolve
-        deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
-        
-        this_mouse_act(:,:,day_idx-these_day_idx(1)+1) = deconvolved_stim_avg_act;
-    end
-    
-    all_mice_avg_act(:,:,animal_id) = mean(this_mouse_act,3);
-end
-
-% get fluorescence
-pre_learned_avg_act = nanmean(all_mice_avg_act,3);
-pre_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),pre_learned_avg_act);
-
-% video
-AP_image_scroll(pre_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-axis image;
-
-%% -- post-learning
-all_mice_avg_act = nan(num_comp,length(timevec),length(animals));
-
-for animal_id = 2:length(animals)
-    % get day indexes
-    all_training_days = task_master_activity(animal_id).day;
-    reversal_task_days_mask = task_master_activity(animal_id).reversal_task_days_mask;
+    all_training_days = passive_master_activity(animal_id).day;
+    reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
     reversal_task_day_idx = find(reversal_task_days_mask);
     
     % find which day the learned day is in whole dataset
     these_day_idx = reversal_task_day_idx(learned_day_idx:end);
     
-    this_mouse_act = nan(num_comp, length(timevec), length(these_day_idx));
+    % initialize empty ROIs thing
+    this_left_ROI = nan(length(timevec),length(these_day_idx));
+    this_right_ROI = nan(length(timevec),length(these_day_idx));
+    
+    % go through all learned days
     for day_idx = these_day_idx
-        % get stim act for this animal and day
-        stim_act = task_master_activity(animal_id).stim_activity{day_idx};
+        day = all_training_days{day_idx};
         
-        % load trial information and wheel move
-        trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-        % only completed trials
-        trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
         
-        stim_wheel_move = task_master_activity(animal_id).stim_wheel_move{day_idx};
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
         
-        % find average activity for each stimulus
-        stim_avg_act = nanmean(stim_act,3);
-        stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
+        % take no move trials and identify stim_id = -1
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
         
-        % deconvolve
-        deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
+        % trials with no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
         
-        this_mouse_act(:,:,day_idx-these_day_idx(1)+1) = deconvolved_stim_avg_act;
+        % left stim act
+        left_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==-1);
+        
+        % get avg left ROI for left stim
+        left_ROI = AP_svd_roi(U_master(:,:,1:num_comp),left_stim_act,[],[],roi.frontal_left);
+        left_ROI = permute(left_ROI,[2,3,1]);
+        this_left_ROI(:,day_idx-these_day_idx(1)+1) = mean(left_ROI,2);
+        
+        % get avg right ROI for left stim
+        right_ROI = AP_svd_roi(U_master(:,:,1:num_comp),left_stim_act,[],[],roi.frontal_right);
+        right_ROI = permute(right_ROI,[2,3,1]);
+        this_right_ROI(:,day_idx-these_day_idx(1)+1) = mean(right_ROI,2);
     end
     
-    all_mice_avg_act(:,:,animal_id) = mean(this_mouse_act,3);
+    reversal_left_frontal_ROIs(animal_id,:) = mean(this_left_ROI,2);
+    reversal_right_frontal_ROIs(animal_id,:) = mean(this_right_ROI,2);
 end
 
-% get fluorescence
-post_learned_avg_act = nanmean(all_mice_avg_act,3);
-post_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),post_learned_avg_act);
 
-% video
-AP_image_scroll(post_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-axis image;
+% plot
+roi_colors = cat(1,brewermap(2,'Reds'),brewermap(2,'Blues'));
 
-%% learner
-%% -- pre-learning
+figure;
+title('mPFC ROIs in original and reversal passive learner')
+hold on;
+set(gca,'ColorOrder',roi_colors)
+plot(timevec, original_left_frontal_ROIs(1,:)')
+hold on;
+plot(timevec, reversal_left_frontal_ROIs(1,:)');
+hold on;
+plot(timevec, original_right_frontal_ROIs(1,:)')
+hold on;
+plot(timevec, reversal_right_frontal_ROIs(1,:)');
+hold on;
+xline(0.1, '-', {'RT original'}, 'LineWidth', 1.5)
+xline(0.2, '-', {'RT reversal'}, 'LineWidth', 3)
+legend({'Original task left mPFC', 'Reversal task left mPFC', 'Original task right mPFC', 'Reversal task right mPFC'})
 
-animal_id = 1;
+%% RT and Passive fluorescence ----------------------------------------------
 
+%% - original task
+
+% stim right
+stim_idx = 3;
+
+% just initialize with nans for all animals and days of 107
 % get day indexes
-all_training_days = task_master_activity(animal_id).day;
-reversal_task_days_mask = task_master_activity(animal_id).reversal_task_days_mask;
-reversal_task_day_idx = find(reversal_task_days_mask);
+all_training_days = passive_master_activity(animal_id).day;
+original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
 
-% find which day the learned day is in whole dataset
-these_day_idx = reversal_task_day_idx(1:learned_day_idx-1);
+all_avg_frontal_left = nan(length(animals), length(original_task_day_idx));
 
-this_mouse_act = nan(num_comp, length(timevec), length(these_day_idx));
-for day_idx = these_day_idx
-    % get stim act for this animal and day
-    stim_act = task_master_activity(animal_id).stim_activity{day_idx};
+% go through each animal
+for animal_id=1:length(animals)
     
-    % load trial information and wheel move
-    trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-    % only completed trials
-    trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
+    animal = animals(animal_id);
     
-    stim_wheel_move = task_master_activity(animal_id).stim_wheel_move{day_idx};
+    % get day indexes
+    all_training_days = passive_master_activity(animal_id).day;
+    original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+    original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+    first_day_idx = original_task_day_idx(1);
     
-    % find average activity for each stimulus
-    stim_avg_act = nanmean(stim_act,3);
-    stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
+    % initialize avg_ROI trace to plot for this animal
+    avg_this_ROI = nan(1,length(original_task_day_idx));
     
-    % deconvolve
-    deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
-    
-    this_mouse_act(:,:,day_idx-these_day_idx(1)+1) = deconvolved_stim_avg_act;
-end
-
-all_mice_avg_act = mean(this_mouse_act,3);
-
-% get fluorescence
-pre_learned_avg_act = mean(all_mice_avg_act,3);
-pre_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),pre_learned_avg_act);
-
-% video
-AP_image_scroll(pre_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-axis image;
-
-%% -- post-learning
-
-% get day indexes
-all_training_days = task_master_activity(animal_id).day;
-reversal_task_days_mask = task_master_activity(animal_id).reversal_task_days_mask;
-reversal_task_day_idx = find(reversal_task_days_mask);
-
-% find which day the learned day is in whole dataset
-these_day_idx = reversal_task_day_idx(learned_day_idx:end);
-
-this_mouse_act = nan(num_comp, length(timevec), length(these_day_idx));
-for day_idx = these_day_idx
-    % get stim act for this animal and day
-    stim_act = task_master_activity(animal_id).stim_activity{day_idx};
-    
-    % load trial information and wheel move
-    trialStimulusValue = task_master_activity(animal_id).trial_id{day_idx};
-    % only completed trials
-    trialStimulusValue = trialStimulusValue(1:size(stim_act,3));
+    for day_idx = original_task_day_idx
         
-    % find average activity for each stimulus
-    stim_avg_act = nanmean(stim_act,3);
-    stim_avg_act = stim_avg_act - stim_avg_act(:,stim_frame,:);
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+        
+        % skip if no activity
+        if isempty(stim_act)
+            continue
+        end
+        
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+        
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
+        
+        % activity for current stim and no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        this_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+        
+        % get avg ROI
+        this_ROI = AP_svd_roi(U_master(:,:,1:num_comp),this_stim_act,[],[],roi.frontal_left);
+        this_ROI = permute(this_ROI,[2,3,1]);
+        this_avg_ROI = mean(this_ROI(small_window_idx,:),2);
+        avg_this_ROI(day_idx-first_day_idx+1) = mean(this_avg_ROI,1);
+    end
     
-    % deconvolve
-    deconvolved_stim_avg_act = AP_deconv_wf(stim_avg_act, [], 1/timestep);
-    
-    this_mouse_act(:,:,day_idx-these_day_idx(1)+1) = deconvolved_stim_avg_act;
+    % to account for difference in training days
+    try
+        all_avg_frontal_left(animal_id,:) = avg_this_ROI;
+    catch 
+        all_avg_frontal_left(animal_id,:) = [avg_this_ROI NaN];
+    end      
 end
 
-all_mice_avg_act = mean(this_mouse_act,3);
+original_mean_other_avg_frontal_left = nanmean(all_avg_frontal_left(2:end,:),1);
+original_avg_frontal_left = nanmean(all_avg_frontal_left(1,:),1);
 
-% get fluorescence
-post_learned_avg_act = mean(all_mice_avg_act,3);
-post_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),post_learned_avg_act);
+%% - reversal task
 
-% video
-AP_image_scroll(post_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
-axis image;
+% stim left
+stim_idx = 1;
+
+% just initialize with nans for all animals and days of 115
+% get day indexes
+all_training_days = passive_master_activity(animal_id).day;
+reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+
+all_avg_frontal_left = nan(length(animals), length(reversal_task_day_idx));
+
+% go through each animal
+for animal_id=1:length(animals)
+    
+    animal = animals(animal_id);
+    
+    % get day indexes
+    all_training_days = passive_master_activity(animal_id).day;
+    reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+    reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+    first_day_idx = reversal_task_day_idx(1);
+    
+    % initialize avg_ROI trace to plot for this animal
+    avg_this_ROI = nan(1,length(reversal_task_day_idx));
+    
+    for day_idx = reversal_task_day_idx
+        
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+        
+        % skip if no activity
+        if isempty(stim_act)
+            continue
+        end
+        
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+        
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
+        
+        % activity for current stim and no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        this_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+        
+        % get avg ROI
+        this_ROI = AP_svd_roi(U_master(:,:,1:num_comp),this_stim_act,[],[],roi.frontal_right);
+        this_ROI = permute(this_ROI,[2,3,1]);
+        this_avg_ROI = mean(this_ROI(small_window_idx,:),2);
+        avg_this_ROI(day_idx-first_day_idx+1) = mean(this_avg_ROI,1);
+    end
+    
+    % to account for difference in training days
+    try
+        all_avg_frontal_left(animal_id,:) = avg_this_ROI;
+    catch
+        all_avg_frontal_left(animal_id,:) = [avg_this_ROI NaN NaN];
+    end      
+end
+
+reversal_mean_other_avg_frontal_left = nanmean(all_avg_frontal_left(2:end,:),1);
+reversal_avg_frontal_left = nanmean(all_avg_frontal_left(1,:),1);
+
+%% - RT
+load('all_mice_behaviour.mat');
+
+% Original task 
+all_training_days = behaviour(1).day;
+original_task_days_mask = behaviour(1).original_task_days_mask;
+muscimol_days =  behaviour(1).muscimol_days;
+muscimol_days_mask = ismember(all_training_days, muscimol_days);
+original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+
+original_all_RT = nan(length(animals), length(original_task_day_idx));
+for animal_id=1:length(animals)
+    all_training_days = behaviour(animal_id).day;
+    original_task_days_mask = behaviour(animal_id).original_task_days_mask;
+    muscimol_days =  behaviour(animal_id).muscimol_days;
+    muscimol_days_mask = ismember(all_training_days, muscimol_days);
+    original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+    
+    % get reaction times percentage that falls between 100-200 ms
+    reaction_times_percentage = nan(1,length(original_task_day_idx));
+    first_day_idx = original_task_day_idx(1);
+    for day_idx = original_task_day_idx
+        reaction_times = behaviour(animal_id).reaction_times{day_idx};
+        reaction_times_percentage(day_idx-first_day_idx+1) = sum(discretize(reaction_times,[0.1 0.2])==1)/length(reaction_times);
+    end
+    try
+        original_all_RT(animal_id, :) = reaction_times_percentage;
+    catch
+        original_all_RT(animal_id, :) = [reaction_times_percentage NaN];
+    end
+end
+
+% ger average RT traces
+original_other_mean_RT = nanmean(original_all_RT(2:end,:), 1);
+original_RT = nanmean(original_all_RT(1,:), 1);
+
+% Reversal 
+
+% days for 115
+all_training_days = behaviour(animal_id).day;
+reversal_task_days_mask = behaviour(animal_id).reversal_task_days_mask;
+muscimol_days =  behaviour(animal_id).muscimol_days;
+muscimol_days_mask = ismember(all_training_days, muscimol_days);
+reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+
+reversal_all_RT = nan(length(animals), length(reversal_task_day_idx));
+for animal_id=1:length(animals)
+    all_training_days = behaviour(animal_id).day;
+    reversal_task_days_mask = behaviour(animal_id).reversal_task_days_mask;
+    muscimol_days =  behaviour(animal_id).muscimol_days;
+    muscimol_days_mask = ismember(all_training_days, muscimol_days);
+    reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+    
+    % get reaction times percentage that falls between 100-200 ms
+    reaction_times_percentage = nan(1,length(reversal_task_day_idx));
+    first_day_idx = reversal_task_day_idx(1);
+    for day_idx = reversal_task_day_idx
+        reaction_times = behaviour(animal_id).reaction_times{day_idx};
+        reaction_times_percentage(day_idx-first_day_idx+1) = sum(discretize(reaction_times,[0.1 0.2])==1)/length(reaction_times);
+    end
+    try
+        reversal_all_RT(animal_id, :) = reaction_times_percentage;
+    catch
+        reversal_all_RT(animal_id, :) = [reaction_times_percentage NaN NaN];
+    end
+end
+
+% ger average RT traces
+reversal_other_mean_RT = nanmean(reversal_all_RT(2:end,:), 1);
+reversal_RT = nanmean(reversal_all_RT(1,:), 1);
+
+%% - plot
+
+% original
+roi_colors = cat(1,brewermap(2,'Oranges'));
+figure;
+title('Original RT and fluorescence')
+hold on;
+
+yyaxis left
+set(gca,'ColorOrder',roi_colors)
+plot(original_RT);
+hold on;
+plot(original_other_mean_RT)
+hold on;
+ylim([0 0.8])
+
+yyaxis right
+set(gca,'ColorOrder',roi_colors)
+plot(original_avg_frontal_left)
+hold on;
+plot(original_mean_other_avg_frontal_left)
+ylim([-1*10^-3 3*10^-3])
+
+
+% reversal
+roi_colors = cat(1,brewermap(2,'Purples'));
+figure;
+title('Reversal RT and fluorescence')
+hold on;
+
+% this is not true - figure out better way to do this
+colororder(roi_colors)
+
+yyaxis left
+set(gca,'ColorOrder',roi_colors)
+plot(reversal_RT);
+hold on;
+plot(reversal_other_mean_RT)
+hold on;
+ylim([0 0.8])
+
+yyaxis right
+set(gca,'ColorOrder',roi_colors)
+plot(reversal_avg_frontal_left)
+hold on;
+plot(reversal_mean_other_avg_frontal_left)
+ylim([-1*10^-3 3*10^-3])
