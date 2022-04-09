@@ -52,9 +52,55 @@ xlabel('Training day')
 ylabel('Percentage of reaction times within 100-200 ms')
 legend(animals)
 
+%% AP107 histograms
+load('all_mice_behaviour.mat');
+
+animals = {'AP107','AP108', 'AP113', 'AP114', 'AP115'};
+
+animal_id = 1;
+
+% original
+learned_day_idx = 5;
+% get day indexes
+all_training_days = behaviour(animal_id).day;
+original_task_days_mask = behaviour(animal_id).original_task_days_mask;
+original_task_day_idx = find(original_task_days_mask);
+first_day_idx = original_task_day_idx(1);
+% find day indices for learned days
+these_day_idx = original_task_day_idx(learned_day_idx:end);
+% append all RT post-learning
+original_RT = [];
+for day_idx = these_day_idx
+    reaction_times = behaviour(animal_id).reaction_times{day_idx};
+    original_RT = [original_RT reaction_times];
+end
+
+% reversal
+learned_day_idx = 7;
+% get day indexes
+all_training_days = behaviour(animal_id).day;
+reversal_task_days_mask = behaviour(animal_id).reversal_task_days_mask;
+reversal_task_day_idx = find(reversal_task_days_mask);
+first_day_idx = reversal_task_day_idx(1);
+% find day indices for learned days
+these_day_idx = reversal_task_day_idx(learned_day_idx:end);
+% append all RT post-learning
+reversal_RT = [];
+for day_idx = these_day_idx
+    reaction_times = behaviour(animal_id).reaction_times{day_idx};
+    reversal_RT = [reversal_RT reaction_times];
+end
+
+% plot
+figure; 
+histogram(original_RT,'BinWidth', 0.01, 'BinLimits', [0 1])
+hold on;
+histogram(reversal_RT,'BinWidth', 0.01, 'BinLimits', [0 1])
+legend({'original task', 'reversal task'})
+
 %% PASSIVE FLUORESCENCE ----------------------------------------------------
 
-%% Load and plot activity across days + ROIs
+%% ROIs
 
 % AP107
 % load activity from passive
@@ -77,7 +123,7 @@ load('ROIs.mat');
 master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
 load(master_u_fn);
 
-% plot frontal left ROIs for each day
+%% - frontal left ROIs 
 % get day indexes
 all_training_days = passive_master_activity(animal_id).day;
 original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
@@ -103,7 +149,17 @@ hold on;
 set(gca,'ColorOrder',roi_colors)
 plot(timevec,frontal_left_avg_ROI);
 
-% frontal right ROIs
+% make a plot of just day 1, learned day 5 and last day 10
+days = [1 5 10];
+roi_colors = max(0, brewermap(3,'Reds')-0.2);
+figure('Name', 'Passive original frontal left ROI');
+hold on;
+set(gca,'ColorOrder',roi_colors)
+plot(timevec,frontal_left_avg_ROI(days, :), 'LineWidth', 1.5);
+legend({'day 1', 'day 5', 'day 10'})
+
+
+%% - frontal right ROIs
 % get day indexes
 all_training_days = passive_master_activity(animal_id).day;
 reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
@@ -123,11 +179,77 @@ for day_idx=reversal_task_day_idx
 end
 
 roi_colors = brewermap(length(reversal_task_day_idx),'Blues');
-figure; title('Passive reversal each day left ROI');
+figure; title('Passive reversal each day frontal right ROI');
 hold on;
 set(gca,'ColorOrder',roi_colors)
 plot(timevec,frontal_right_avg_ROI);
 
+% make a plot of just day 1, learned day 5 and last day 10
+days = [1 5 10];
+roi_colors = max(0, brewermap(3,'Blues')-0.2);
+figure('Name', 'Passive reversal frontal right ROI');
+hold on;
+set(gca,'ColorOrder',roi_colors)
+plot(timevec,frontal_right_avg_ROI(days, :), 'LineWidth', 1.5);
+legend({'day 1', 'day 5', 'day 10'})
+
+
+%% - visual left ROIs 
+% get day indexes
+all_training_days = passive_master_activity(animal_id).day;
+original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+
+visual_left_avg_ROI = nan(length(original_task_day_idx),length(timevec));
+for day_idx=original_task_day_idx
+    stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+    deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+    deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+    
+    trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+    right_stim_act = deconvolved_stim_avg_act(:,:,trialStimulusValue==1);
+    visual_left = AP_svd_roi(U_master(:,:,1:num_comp),right_stim_act,[],[],roi.visual_left);
+    visual_left = permute(visual_left,[2,3,1]);
+    visual_left_avg_ROI(day_idx-original_task_day_idx(1)+1,:) = mean(visual_left,2);
+end
+
+% make a plot of just day 1, learned day 5 and last day 10
+days = [1 5 10];
+roi_colors = brewermap(3,'Oranges');
+figure('Name', 'Passive original visual left ROI');
+hold on;
+set(gca,'ColorOrder',roi_colors)
+plot(timevec,visual_left_avg_ROI(days, :), 'LineWidth', 1.5);
+legend({'day 1', 'day 5', 'day 10'})
+
+%% - visual right ROIs
+% get day indexes
+all_training_days = passive_master_activity(animal_id).day;
+reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+reversal_task_day_idx = find(reversal_task_days_mask);
+
+visual_right_avg_ROI = nan(length(reversal_task_day_idx),length(timevec));
+for day_idx=reversal_task_day_idx
+    stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+    deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+    deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+    
+    trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+    right_stim_act = deconvolved_stim_avg_act(:,:,trialStimulusValue==-1);
+    visual_right = AP_svd_roi(U_master(:,:,1:num_comp),right_stim_act,[],[],roi.visual_right);
+    visual_right = permute(visual_right,[2,3,1]);
+    visual_right_avg_ROI(day_idx-reversal_task_day_idx(1)+1,:) = mean(visual_right,2);
+end
+
+% make a plot of just day 1, learned day 5 and last day 10
+days = [1 5 10];
+roi_colors = max(0, brewermap(3,'Purples')-0.2);
+figure('Name', 'Passive reversal visual right ROI');
+hold on;
+set(gca,'ColorOrder',roi_colors)
+plot(timevec,visual_right_avg_ROI(days, :), 'LineWidth', 1.5);
+legend({'day 1', 'day 5', 'day 10'})
 
 %% choose time window
 
@@ -282,7 +404,7 @@ for animal_id=1:length(animals)
 end
 
 % save the avg_fluorescence pics in struct to load easily
-save('passive_master_activity.mat', 'passive_master_activity', '-v7.3')
+% save('passive_master_activity.mat', 'passive_master_activity', '-v7.3')
 
 
 %% Pictures each day + ROIs
@@ -483,7 +605,7 @@ end
 
 %% ROI plots per task
 
-figsdir = 'D:\Andrada\Master project\Random figures\ROI plots per task\';
+figsdir = 'D:\Andrada\Master project\Random figures\Passive\ROI plots per task\';
 
 % load activity from passive
 load('passive_master_activity.mat');
@@ -531,7 +653,8 @@ for ROI_idx=1:length(all_ROIs)
             % get day indexes
             all_training_days = passive_master_activity(animal_id).day;
             original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
-            original_task_day_idx = find(original_task_days_mask);
+            muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+            original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
             first_day_idx = original_task_day_idx(1);
             
             % initialize avg_ROI trace to plot for this animal
@@ -567,17 +690,24 @@ for ROI_idx=1:length(all_ROIs)
             end
             
             % plot
-            plot(avg_this_ROI(stim_idx,:), '-o');
+            plot(avg_this_ROI(stim_idx,:), '-o', 'LineWidth', 2);
             hold on;
-            ylabel('ROI fluorescence');
-            ylim([-2*10^(-3) 6*10^(-3)]);
         end
+        ylabel('ROI fluorescence');
+        xlabel('Training day');
+        ylim([-2*10^(-3) 6*10^(-3)]);
         legend(animals)
-        saveas(gcf,[figsdir 'Original_task_ROI trace ' cell2mat(all_ROIs(ROI_idx)) ' for stim ' num2str(possible_stimuli(stim_idx)) '.png'])
+        AM_prettyfig
+        % saveas(gcf,[figsdir 'Original_task_ROI trace ' cell2mat(all_ROIs(ROI_idx)) ' for stim ' num2str(possible_stimuli(stim_idx)) '.png'])
     end
 end
 
 %% - Reversal task plot
+
+% make a colorOrder thing where 107's line is black and others are gray 
+
+colors_reversal = cat(1, [0 0 0], repmat([0.5 0.5 0.5], [4, 1]));
+
 % go through all ROIs
 for ROI_idx=1:length(all_ROIs)
     
@@ -588,7 +718,8 @@ for ROI_idx=1:length(all_ROIs)
         
         % name of plot
         figure('Name',['ROI trace ' cell2mat(all_ROIs(ROI_idx)) ' for stim ' num2str(possible_stimuli(stim_idx))]);
-        
+        ax = axes;
+
         % go through each animal
         for animal_id=1:length(animals)
             
@@ -633,16 +764,18 @@ for ROI_idx=1:length(all_ROIs)
             end
             
             % plot
-            plot(avg_this_ROI(stim_idx,:), '-o');
+            plot(avg_this_ROI(stim_idx,:), '-o', 'LineWidth', 2);
             hold on;
-            ylabel('ROI fluorescence');
-            ylim([-2*10^(-3) 6*10^(-3)]);
         end
-        legend(animals)
-        saveas(gcf,[figsdir 'Reversal_task_ROI trace ' cell2mat(all_ROIs(ROI_idx)) ' for stim ' num2str(possible_stimuli(stim_idx)) '.png'])
+        ylabel('ROI fluorescence');
+        xlabel('Training day');
+        ylim([-2*10^(-3) 6*10^(-3)]);
+        ax.ColorOrder = colors_reversal;
+        legend({'learner', 'non-learners'})
+        AM_prettyfig
+        % saveas(gcf,[figsdir 'Reversal_task_ROI trace ' cell2mat(all_ROIs(ROI_idx)) ' for stim ' num2str(possible_stimuli(stim_idx)) '.png'])
     end
 end
-
 
 %% Average brain pictures
 
@@ -675,6 +808,10 @@ small_window_idx = timevec>=small_window(1)&timevec<=small_window(2);
 possible_stimuli = [-1 0 1];
 
 %% - Passive
+
+% temp averaging window
+% small_window = [0.05 0.3];
+% small_window_idx = timevec>=small_window(1)&timevec<=small_window(2);
 
 % learned day in task - passive day 1 (should all days but didn't have time to think)
 all_passive_days = 1:3;
@@ -730,6 +867,15 @@ for stim_idx =1:length(possible_stimuli)
     set(gca,'Ytick',[])
 end
 
+% plot for each stim
+for stim_idx =1:length(possible_stimuli)
+    figure; title(['Passive all days' num2str(possible_stimuli(stim_idx))]);
+    imagesc(all_stim_interval_avg_fluorescence(:,:,stim_idx)); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)]);
+    axis image;
+    axis off;
+    hold on;
+    AP_reference_outline('ccf_aligned','#808080');
+end
 %% - Original learned day
 
 % learned day in task
@@ -788,7 +934,15 @@ for stim_idx =1:length(possible_stimuli)
     set(gca,'Ytick',[])
 end
 
-
+% plot for each stim
+for stim_idx =1:length(possible_stimuli)
+    figure('Name',['Original task all post-learning days stim' num2str(possible_stimuli(stim_idx))]);
+    imagesc(all_stim_interval_avg_fluorescence(:,:,stim_idx)); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)]);
+    axis image;
+    axis off;
+    hold on;
+    AP_reference_outline('ccf_aligned','#808080');
+end
 %% - Reversal learned day
 
 % learned day in task
@@ -853,6 +1007,14 @@ for stim_idx =1:length(possible_stimuli)
     set(gca,'Ytick',[])
 end
 
+for stim_idx =1:length(possible_stimuli)
+    figure('Name',['Reversal task all post-learning days for learner stim' num2str(possible_stimuli(stim_idx))]);
+    imagesc(all_stim_interval_avg_fluorescence(:,:,stim_idx)); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)]);
+    axis image;
+    axis off;
+    hold on;
+    AP_reference_outline('ccf_aligned','#808080');
+end
 
 %% -- other mice
 
@@ -909,6 +1071,16 @@ for stim_idx =1:length(possible_stimuli)
     set(gca,'Xtick',[])
     set(gca,'Ytick',[])
 end
+
+for stim_idx =1:length(possible_stimuli)
+    figure('Name',['Reversal task all post-learning days for non-learners stim' num2str(possible_stimuli(stim_idx))]);
+    imagesc(all_stim_interval_avg_fluorescence(:,:,stim_idx)); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)]);
+    axis image;
+    axis off;
+    hold on;
+    AP_reference_outline('ccf_aligned','#808080');
+end
+
 
 %% Stim and ROI plot
 
@@ -1356,6 +1528,450 @@ xline(0.1, '-', {'RT original'}, 'LineWidth', 1.5)
 xline(0.2, '-', {'RT reversal'}, 'LineWidth', 3)
 legend({'Original task left mPFC', 'Reversal task left mPFC', 'Original task right mPFC', 'Reversal task right mPFC'})
 
+%% Averaged vis+frontal avg fluorescence
+
+%% - Original 
+
+%% -- visual left
+% stim left
+stim_idx = 3;
+
+% just initialize with nans for all animals and days of 107
+% get day indexes
+animal_id=1;
+all_training_days = passive_master_activity(animal_id).day;
+original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+num_original_days = length(original_task_day_idx);
+
+all_avg_visual_left = nan(length(animals), length(original_task_day_idx));
+
+% go through each animal
+for animal_id=1:length(animals)
+    
+    animal = animals(animal_id);
+    
+    % get day indexes
+    all_training_days = passive_master_activity(animal_id).day;
+    original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+    original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+    first_day_idx = original_task_day_idx(1);
+    
+    % initialize avg_ROI trace to plot for this animal
+    avg_this_ROI = nan(1,length(original_task_day_idx));
+    
+    for day_idx = original_task_day_idx
+        
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+        
+        % skip if no activity
+        if isempty(stim_act)
+            continue
+        end
+        
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+        
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
+        
+        % activity for current stim and no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        this_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+        
+        % get avg ROI
+        this_ROI = AP_svd_roi(U_master(:,:,1:num_comp),this_stim_act,[],[],roi.visual_left);
+        this_ROI = permute(this_ROI,[2,3,1]);
+        this_avg_ROI = mean(this_ROI(small_window_idx,:),2);
+        avg_this_ROI(day_idx-first_day_idx+1) = mean(this_avg_ROI,1);
+    end
+    
+    % to account for difference in training days
+    try
+        all_avg_visual_left(animal_id,:) = avg_this_ROI;
+    catch
+        all_avg_visual_left(animal_id,:) = [avg_this_ROI NaN];
+    end      
+end
+
+original_mean_other_avg_visual_left = nanmean(all_avg_visual_left(2:end,:),1);
+original_avg_visual_left = nanmean(all_avg_visual_left(1,:),1);
+
+%% frontal left 
+
+% stim left
+stim_idx = 3;
+
+% just initialize with nans for all animals and days of 107
+% get day indexes
+animal_id=1;
+all_training_days = passive_master_activity(animal_id).day;
+original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+num_original_days = length(original_task_day_idx);
+
+all_avg_frontal_left = nan(length(animals), length(original_task_day_idx));
+
+% go through each animal
+for animal_id=1:length(animals)
+    
+    animal = animals(animal_id);
+    
+    % get day indexes
+    all_training_days = passive_master_activity(animal_id).day;
+    original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+    original_task_day_idx = find(original_task_days_mask-muscimol_days_mask==1);
+    first_day_idx = original_task_day_idx(1);
+    
+    % initialize avg_ROI trace to plot for this animal
+    avg_this_ROI = nan(1,length(original_task_day_idx));
+    
+    for day_idx = original_task_day_idx
+        
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+        
+        % skip if no activity
+        if isempty(stim_act)
+            continue
+        end
+        
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+        
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
+        
+        % activity for current stim and no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        this_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+        
+        % get avg ROI
+        this_ROI = AP_svd_roi(U_master(:,:,1:num_comp),this_stim_act,[],[],roi.frontal_left);
+        this_ROI = permute(this_ROI,[2,3,1]);
+        this_avg_ROI = mean(this_ROI(small_window_idx,:),2);
+        avg_this_ROI(day_idx-first_day_idx+1) = mean(this_avg_ROI,1);
+    end
+    
+    % to account for difference in training days
+    try
+        all_avg_frontal_left(animal_id,:) = avg_this_ROI;
+    catch
+        all_avg_frontal_left(animal_id,:) = [avg_this_ROI NaN];
+    end      
+end
+
+original_mean_other_avg_frontal_left = nanmean(all_avg_frontal_left(2:end,:),1);
+original_avg_frontal_left = nanmean(all_avg_frontal_left(1,:),1);
+
+%% plot for average
+
+% all mice
+% colors
+roi_colors = max(0, brewermap(1,'Oranges')-0.2);
+% name of plot
+figure('Name',['All avg fluorescence for visual left for stim ' num2str(possible_stimuli(stim_idx))]);
+% plot
+plot(1:num_original_days, nanmean(all_avg_visual_left,1), '-o', 'LineWidth', 2);
+hold on;
+set(gca,'ColorOrder',roi_colors)
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-1*10^(-3) 4*10^(-3)]);
+AM_prettyfig
+
+% AP107
+% colors
+roi_colors = max(0, brewermap(1,'Oranges')-0.2);
+% name of plot
+figure('Name',['AP107 avg fluorescence for visual left for stim ' num2str(possible_stimuli(stim_idx))]);
+% plot
+plot(1:num_original_days, original_avg_visual_left, '-o', 'LineWidth', 2);
+hold on;
+set(gca,'ColorOrder',roi_colors)
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-1*10^(-3) 6*10^(-3)]);
+AM_prettyfig
+
+% %  ----- separated - by learner in reversal
+% % colors
+% colors_original_avg = cat(1, [0 0 0], [0.5 0.5 0.5]);
+% % name of plot
+% figure('Name',['ROI trace for visual left for stim ' num2str(possible_stimuli(stim_idx))]);
+% ax = axes;
+% % plot
+% plot(1:num_original_days, original_avg_visual_left, '-o', 'LineWidth', 2);
+% hold on;
+% plot(1:num_original_days,original_mean_other_avg_visual_left, '-o', 'LineWidth', 2);
+% hold on;
+% ylabel('ROI fluorescence');
+% xlabel('Training day');
+% ylim([-2*10^(-3) 6*10^(-3)]);
+% ax.ColorOrder = colors_original_avg;
+% legend({'learner', 'non-learners'})
+% AM_prettyfig
+
+% all mice
+% colors
+roi_colors = max(0, brewermap(1,'Reds')-0.4);
+% name of plot
+figure('Name',['All avg fluorescence for frontal left for stim ' num2str(possible_stimuli(stim_idx))]);
+% plot
+plot(1:num_original_days, nanmean(all_avg_frontal_left,1), '-o', 'LineWidth', 2);
+hold on;
+set(gca,'ColorOrder',roi_colors)
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-1*10^(-3) 4*10^(-3)]);
+AM_prettyfig
+
+% AP107
+% colors
+roi_colors = max(0, brewermap(1,'Reds')-0.4);
+% name of plot
+figure('Name',['AP107 avg fluorescence for frontal left for stim ' num2str(possible_stimuli(stim_idx))]);
+% plot
+plot(1:num_original_days, original_avg_frontal_left, '-o', 'LineWidth', 2);
+hold on;
+set(gca,'ColorOrder',roi_colors)
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-1*10^(-3) 6*10^(-3)]);
+AM_prettyfig
+
+
+% % ----- separated
+% % colors
+% colors_original_avg = cat(1, [0 0 0], [0.5 0.5 0.5]);
+% % name of plot
+% figure('Name',['ROI trace for frontal left for stim ' num2str(possible_stimuli(stim_idx))]);
+% ax = axes;
+% % plot
+% plot(1:num_original_days, original_avg_frontal_left, '-o', 'LineWidth', 2);
+% hold on;
+% plot(1:num_original_days,original_mean_other_avg_frontal_left, '-o', 'LineWidth', 2);
+% hold on;
+% ylabel('ROI fluorescence');
+% xlabel('Training day');
+% ylim([-2*10^(-3) 6*10^(-3)]);
+% ax.ColorOrder = colors_original_avg;
+% legend({'learner', 'non-learners'})
+% AM_prettyfig
+
+
+
+%% - Reversal 
+
+%% visual right 
+% stim left
+stim_idx = 1;
+
+% just initialize with nans for all animals and days of 115
+% get day indexes
+all_training_days = passive_master_activity(animal_id).day;
+reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+
+all_avg_visual_right = nan(length(animals), length(reversal_task_day_idx));
+
+% go through each animal
+for animal_id=1:length(animals)
+    
+    animal = animals(animal_id);
+    
+    % get day indexes
+    all_training_days = passive_master_activity(animal_id).day;
+    reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+    reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+    first_day_idx = reversal_task_day_idx(1);
+    
+    % initialize avg_ROI trace to plot for this animal
+    avg_this_ROI = nan(1,length(reversal_task_day_idx));
+    
+    for day_idx = reversal_task_day_idx
+        
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+        
+        % skip if no activity
+        if isempty(stim_act)
+            continue
+        end
+        
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+        
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
+        
+        % activity for current stim and no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        this_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+        
+        % get avg ROI
+        this_ROI = AP_svd_roi(U_master(:,:,1:num_comp),this_stim_act,[],[],roi.visual_right);
+        this_ROI = permute(this_ROI,[2,3,1]);
+        this_avg_ROI = mean(this_ROI(small_window_idx,:),2);
+        avg_this_ROI(day_idx-first_day_idx+1) = mean(this_avg_ROI,1);
+    end
+    
+    % to account for difference in training days
+    try
+        all_avg_visual_right(animal_id,:) = avg_this_ROI;
+    catch
+        all_avg_visual_right(animal_id,:) = [avg_this_ROI NaN NaN];
+    end      
+end
+
+reversal_mean_other_avg_visual_right = nanmean(all_avg_visual_right(2:end,:),1);
+reversal_avg_visual_right = nanmean(all_avg_visual_right(1,:),1);
+
+%% frontal right 
+
+% stim left
+stim_idx = 1;
+
+% just initialize with nans for all animals and days of 115
+% get day indexes
+all_training_days = passive_master_activity(animal_id).day;
+reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+
+all_avg_frontal_right = nan(length(animals), length(reversal_task_day_idx));
+
+% go through each animal
+for animal_id=1:length(animals)
+    
+    animal = animals(animal_id);
+    
+    % get day indexes
+    all_training_days = passive_master_activity(animal_id).day;
+    reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
+    muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
+    reversal_task_day_idx = find(reversal_task_days_mask-muscimol_days_mask==1);
+    first_day_idx = reversal_task_day_idx(1);
+    
+    % initialize avg_ROI trace to plot for this animal
+    avg_this_ROI = nan(1,length(reversal_task_day_idx));
+    
+    for day_idx = reversal_task_day_idx
+        
+        % load activity
+        stim_act = passive_master_activity(animal_id).stim_activity{day_idx};
+        
+        % skip if no activity
+        if isempty(stim_act)
+            continue
+        end
+        
+        % deconvolve and baseline substract
+        deconvolved_stim_avg_act = AP_deconv_wf(stim_act, [], 1/timestep);
+        deconvolved_stim_avg_act = deconvolved_stim_avg_act - deconvolved_stim_avg_act(:,stim_frame,:);
+        
+        % get trial information
+        trialStimulusValue = passive_master_activity(animal_id).trial_id{day_idx};
+        stim_wheel_move = passive_master_activity(animal_id).stim_wheel_move{day_idx};
+        
+        % activity for current stim and no move
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        this_stim_act = deconvolved_stim_avg_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
+        
+        % get avg ROI
+        this_ROI = AP_svd_roi(U_master(:,:,1:num_comp),this_stim_act,[],[],roi.frontal_right);
+        this_ROI = permute(this_ROI,[2,3,1]);
+        this_avg_ROI = mean(this_ROI(small_window_idx,:),2);
+        avg_this_ROI(day_idx-first_day_idx+1) = mean(this_avg_ROI,1);
+    end
+    
+    % to account for difference in training days
+    try
+        all_avg_frontal_right(animal_id,:) = avg_this_ROI;
+    catch
+        all_avg_frontal_right(animal_id,:) = [avg_this_ROI NaN NaN];
+    end      
+end
+
+reversal_mean_other_avg_frontal_right = nanmean(all_avg_frontal_right(2:end,:),1);
+reversal_avg_frontal_right = nanmean(all_avg_frontal_right(1,:),1);
+
+%% plot for average black and grey 
+
+% colors
+colors_reversal_avg = cat(1, [0 0 0], [0.5 0.5 0.5]);
+% name of plot
+figure('Name',['ROI trace for visual right for stim ' num2str(possible_stimuli(stim_idx))]);
+ax = axes;
+% plot
+plot(1:length(reversal_task_day_idx), reversal_avg_visual_right, '-o', 'LineWidth', 2);
+hold on;
+plot(1:length(reversal_task_day_idx),reversal_mean_other_avg_visual_right, '-o', 'LineWidth', 2);
+hold on;
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-2*10^(-3) 6*10^(-3)]);
+ax.ColorOrder = colors_reversal_avg;
+legend({'learner', 'non-learners'})
+AM_prettyfig
+
+% colors
+colors_reversal_avg = cat(1, [0 0 0], [0.5 0.5 0.5]);
+% name of plot
+figure('Name',['ROI trace for frontal right for stim ' num2str(possible_stimuli(stim_idx))]);
+ax = axes;
+% plot
+plot(1:length(reversal_task_day_idx), reversal_avg_frontal_right, '-o', 'LineWidth', 2);
+hold on;
+plot(1:length(reversal_task_day_idx),reversal_mean_other_avg_frontal_right, '-o', 'LineWidth', 2);
+hold on;
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-2*10^(-3) 6*10^(-3)]);
+ax.ColorOrder = colors_reversal_avg;
+legend({'learner', 'non-learners'})
+AM_prettyfig
+
+% AP107
+% colors
+roi_colors = max(0, brewermap(1,'Blues')-0.5);
+% name of plot
+figure('Name',['AP107 avg fluorescence for frontal right for stim ' num2str(possible_stimuli(stim_idx))]);
+% plot
+plot(reversal_avg_frontal_right, '-o', 'LineWidth', 2);
+hold on;
+set(gca,'ColorOrder',roi_colors)
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-2*10^(-3) 6*10^(-3)]);
+AM_prettyfig
+
+% colors
+roi_colors = max(0, brewermap(1,'Purples')-0.3);
+% name of plot
+figure('Name',['AP107 avg fluorescence for visual right for stim ' num2str(possible_stimuli(stim_idx))]);
+% plot
+plot(reversal_avg_visual_right, '-o', 'LineWidth', 2);
+hold on;
+set(gca,'ColorOrder',roi_colors)
+ylabel('ROI fluorescence');
+xlabel('Training day');
+ylim([-2*10^(-3) 6*10^(-3)]);
+AM_prettyfig
+
 %% RT and Passive fluorescence ----------------------------------------------
 
 %% - original task
@@ -1365,6 +1981,7 @@ stim_idx = 3;
 
 % just initialize with nans for all animals and days of 107
 % get day indexes
+animal_id = 1;
 all_training_days = passive_master_activity(animal_id).day;
 original_task_days_mask = passive_master_activity(animal_id).original_task_days_mask;
 muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
@@ -1434,6 +2051,7 @@ stim_idx = 1;
 
 % just initialize with nans for all animals and days of 115
 % get day indexes
+animal_id = 5;
 all_training_days = passive_master_activity(animal_id).day;
 reversal_task_days_mask = passive_master_activity(animal_id).reversal_task_days_mask;
 muscimol_days_mask = passive_master_activity(animal_id).muscimol_days_mask;
@@ -1496,10 +2114,12 @@ end
 reversal_mean_other_avg_frontal_left = nanmean(all_avg_frontal_left(2:end,:),1);
 reversal_avg_frontal_left = nanmean(all_avg_frontal_left(1,:),1);
 
+
 %% - RT
 load('all_mice_behaviour.mat');
 
 % Original task 
+animal_id = 1;
 all_training_days = behaviour(1).day;
 original_task_days_mask = behaviour(1).original_task_days_mask;
 muscimol_days =  behaviour(1).muscimol_days;
@@ -1533,6 +2153,7 @@ original_other_mean_RT = nanmean(original_all_RT(2:end,:), 1);
 original_RT = nanmean(original_all_RT(1,:), 1);
 
 % Reversal 
+animal_id = 5;
 
 % days for 115
 all_training_days = behaviour(animal_id).day;
@@ -1570,47 +2191,90 @@ reversal_RT = nanmean(reversal_all_RT(1,:), 1);
 %% - plot
 
 % original
-roi_colors = cat(1,brewermap(2,'Oranges'));
+roi_colors = max(0, brewermap(2,'Reds')-0.3);
 figure;
 title('Original RT and fluorescence')
 hold on;
-
+% RT
 yyaxis left
 set(gca,'ColorOrder',roi_colors)
 plot(original_RT);
 hold on;
 plot(original_other_mean_RT)
 hold on;
+hline = findobj(gcf, 'type', 'line');
+set(hline(1),'LineStyle','--')
 ylim([0 0.8])
-
+ylabel('Percentage of reaction times within 100-200 ms')
+% fluorescence
 yyaxis right
 set(gca,'ColorOrder',roi_colors)
 plot(original_avg_frontal_left)
 hold on;
 plot(original_mean_other_avg_frontal_left)
+hold on;
+hline = findobj(gcf, 'type', 'line');
+set(hline(2),'LineStyle','--')
 ylim([-1*10^-3 3*10^-3])
-
+ylabel('Average fluorescence across training')
+% make axes black
+ax = gca;
+ax.YAxis(1).Color = 'k';
+ax.YAxis(2).Color = 'k';
+% legend
+legend({'learner RT', 'learner fluorescence', 'non-learners RT', 'non-learners fluorescence'})
 
 % reversal
-roi_colors = cat(1,brewermap(2,'Purples'));
+roi_colors = max(0, brewermap(2,'Blues')-0.3);
 figure;
 title('Reversal RT and fluorescence')
 hold on;
-
-% this is not true - figure out better way to do this
-colororder(roi_colors)
-
+% RT
 yyaxis left
 set(gca,'ColorOrder',roi_colors)
 plot(reversal_RT);
 hold on;
 plot(reversal_other_mean_RT)
 hold on;
+hline = findobj(gcf, 'type', 'line');
+set(hline(1),'LineStyle','--')
 ylim([0 0.8])
-
+ylabel('Percentage of reaction times within 100-200 ms')
+% fluorescence
 yyaxis right
 set(gca,'ColorOrder',roi_colors)
 plot(reversal_avg_frontal_left)
 hold on;
 plot(reversal_mean_other_avg_frontal_left)
+hold on;
+hline = findobj(gcf, 'type', 'line');
+set(hline(2),'LineStyle','--')
 ylim([-1*10^-3 3*10^-3])
+ylabel('Average fluorescence across training')
+% make axes black
+ax = gca;
+ax.YAxis(1).Color = 'k';
+ax.YAxis(2).Color = 'k';
+% legend
+legend({'learner RT', 'learner fluorescence', 'non-learners RT', 'non-learners fluorescence'})
+
+%% Average image with atlas
+animal = 'AP107';
+day = '2021-12-17';
+experiment = 2; 
+
+% load experiment
+load_parts.imaging = true;
+load_parts.cam = true;
+verbose = true;
+AP_load_experiment;
+
+aligned_avg_im = AP_align_widefield(avg_im,animal,day);
+
+figure; 
+imagesc(aligned_avg_im); 
+colormap(gray); 
+axis image; 
+axis off; 
+hold on;    
+AP_reference_outline('ccf_aligned','#808080');
