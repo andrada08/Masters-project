@@ -39,7 +39,7 @@ for mouse_idx=1:length(mice)
     animal = mice{mouse_idx};
     protocol = 'AP_lcrGratingPassive';
     experiments = AP_find_experiments(animal,protocol);
-    for day_idx=11:12 %1:length(experiments)
+    for day_idx=length(experiments)-1:length(experiments) %1:length(experiments)
         day = experiments(day_idx).day;
         experiment = experiments(day_idx).experiment(end);
         verbose = true;
@@ -87,8 +87,10 @@ for mouse_idx=1:length(mice)
         all_stim_avg_act = nan(size(all_stim_act,1),size(all_stim_act,2),length(possible_stimuli));
         % completed_trialStimulusValue = trialStimulusValue(1:n_trials);
         
+        no_move_trials = sum(stim_wheel_move(stim_frame:end,:),1)==0;
+        
         for stim_idx =1:length(possible_stimuli)
-            this_stim_act = all_stim_act(:,:,trialStimulusValue==possible_stimuli(stim_idx));
+            this_stim_act = all_stim_act(:,:,no_move_trials&trialStimulusValue==possible_stimuli(stim_idx));
             all_stim_avg_act(:,:,stim_idx) = nanmean(this_stim_act,3);
         end
         

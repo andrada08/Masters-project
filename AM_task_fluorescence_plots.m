@@ -784,6 +784,32 @@ post_learned_avg_fluorescence = AP_svdFrameReconstruct(U_master(:,:,1:num_comp),
 AP_image_scroll(post_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
 axis image;
 
+%% - save movies for learner pre and post
+% pre
+AP_image_scroll(pre_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
+axis image;
+im =pre_learned_avg_fluorescence;
+framerate = 50;
+color_map = get(gcf,'colormap');
+color_axis = caxis;
+figure_position = get(gcf, 'position');
+savefile = 'pre_learn_movie.avi';
+t_annotation = timevec;
+AP_movie2avi(im,framerate,color_map,color_axis,figure_position,savefile)
+
+% post
+AP_image_scroll(post_learned_avg_fluorescence,timevec); colormap(brewermap([], 'PRGn')); caxis([-7*10^(-3) 7*10^(-3)])
+axis image;
+im =post_learned_avg_fluorescence;
+framerate = 50;
+color_map = get(gcf,'colormap');
+color_axis = caxis;
+figure_position = get(gcf, 'position');
+savefile = 'post_learn_movie.avi';
+t_annotation = timevec;
+AP_movie2avi(im,framerate,color_map,color_axis,figure_position,savefile)
+
+
 %% Diff between original and reversal post-learning 
 
 %% -- post-learning original
