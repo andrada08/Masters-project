@@ -497,3 +497,97 @@ end
 
 save('task_master_activity.mat', 'task_master_activity', '-v7.3')
 disp('Saved')
+
+%% Get and save post-training passive fluorescence
+
+animals = {'AP107', 'AP108', 'AP113', 'AP114', 'AP115'};
+
+master_u_fn = 'D:\Andrada\Master project\widefield_alignment\U_master';
+load(master_u_fn);
+
+load('passive_master_activity.mat')
+
+% create matrix of times for movie
+timestep = 0.01;
+start_time = -0.5;
+end_time = 1;
+timevec = [start_time:timestep:end_time];
+stim_frame = (-start_time)*(1/timestep)+1;
+
+% 
+% passive_master_activity.timestep = timestep;
+% passive_master_activity.start_time = start_time;
+% passive_master_activity.end_time = end_time;
+% passive_master_activity.stim_frame = stim_frame;
+% passive_master_activity.timevec = timevec;
+
+% define number of components
+% num_comp = 200;
+% passive_master_activity.num_comp = 200;
+
+for animal_id=3:length(animals)
+    animal = animals{animal_id};
+    passive_master_activity(animal_id).animal = animal;
+    
+    % find passive days
+    protocol = 'AP_lcrGratingPassive';
+    experiments = AP_find_experiments(animal,protocol);
+    for day_index=length({experiments.day})-2:length({experiments.day})
+        day = experiments(day_index).day;
+        passive_master_activity(animal_id).day{day_index} = day;
+        
+        % find passive experiment
+        experiment = experiments(day_index).experiment(end);
+        
+        % load experiment
+        load_parts.imaging = true;
+        load_parts.cam = true;
+        verbose = true;
+        AP_load_experiment;
+        
+        % find value of stimulus per trial
+        trialStimulusValue = signals_events.stimAzimuthValues/90 .* signals_events.stimContrastValues;
+        
+        % align U's
+        Udf_aligned = AP_align_widefield(Udf,animal,day);
+        % get corresponding V's
+        fVdf_Umaster = ChangeU(Udf_aligned,fVdf,U_master);
+                       
+        % find activity for the time defined
+        time_stimulus = stimOn_times+timevec;
+        all_stim_act = interp1(frame_t,fVdf_Umaster',time_stimulus);
+        all_stim_act = permute(all_stim_act, [3,2,1]);
+        all_stim_act = all_stim_act - all_stim_act(:,stim_frame,:);
+        
+               
+        % save in struct
+        passive_master_activity(animal_id).stim_activity{day_index} = all_stim_act(1:num_comp,:,:);
+        passive_master_activity(animal_id).trial_id{day_index} = trialStimulusValue;
+        
+        % stim aligned wheel move
+        stim_wheel_move = interp1(Timeline.rawDAQTimestamps,+wheel_move,time_stimulus');
+        passive_master_activity(animal_id).stim_wheel_move{day_index} = stim_wheel_move;
+
+    end
+    disp(['Done with ' animal])
+end
+
+disp('Done all')
+
+% get mask for these days
+for animal_id=1:length(animals)
+    
+    animal = animals{animal_id};
+    
+    % find indices for post-training passive days 
+    post_training_passive_days = passive_master_activity(animal_id).day(end-2:end);
+    post_training_passive_days_mask = ismember(passive_master_activity(animal_id).day, post_training_passive_days);
+    passive_master_activity(animal_id).post_training_passive_days_mask = post_training_passive_days_mask;
+end
+
+save('passive_master_activity.mat', 'passive_master_activity', '-v7.3')
+disp('Saved')
+
+% Save 
+save('passive_master_activity.mat', 'passive_master_activity', '-v7.3')
+disp('Saved')

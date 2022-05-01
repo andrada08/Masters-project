@@ -97,7 +97,7 @@ figure;
 histogram(original_RT,'BinWidth', 0.01, 'BinLimits', [0 1], 'Normalization', 'probability')
 hold on;
 histogram(reversal_RT,'BinWidth', 0.01, 'BinLimits', [0 1], 'Normalization', 'probability')
-legend({'right stim / left move task', 'left stim / left move task'})
+legend({'right stim / left move task', 'reversal task'})
 hold on;
 xlabel('Reaction time')
 ylabel('Probability')
