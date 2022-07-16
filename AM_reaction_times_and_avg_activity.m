@@ -23,10 +23,10 @@ for animal_id=1:length(animals)
     hold on;
 end
 
-title('Reaction times for original task')
+%title('Reaction times for original task')
 xlabel('Training day')
-ylabel('Percentage of reaction times within 100-200 ms')
-legend(animals)
+ylabel('% of fast reaction times')
+legend(animals, 'Location','northwest')
 AM_prettyfig
 
 % Reversal task plot
@@ -47,10 +47,10 @@ for animal_id=1:length(animals)
     hold on;
 end
 
-title('Reaction times for reversal task')
+%title('Reaction times for reversal task')
 xlabel('Training day')
-ylabel('Percentage of reaction times within 100-200 ms')
-legend(animals)
+ylabel('% of fast reaction times')
+legend(animals, 'Location','northwest')
 AM_prettyfig
 
 %% AP107 histograms
@@ -1887,7 +1887,7 @@ legend({'Original task left mPFC', 'Reversal task left mPFC', 'Original task rig
 
 
 
-%% Averaged vis+frontal avg fluorescence
+%% Averaged vis+frontal avg fluorescence 
 
 % averaging window
 small_window = [0.05 0.2];
@@ -1965,6 +1965,7 @@ end
 
 original_mean_other_avg_visual_left = nanmean(all_avg_visual_left(2:end,:),1);
 original_avg_visual_left = nanmean(all_avg_visual_left(1,:),1);
+avg_visual_left = nanmean(all_avg_visual_left,1);
 
 %% frontal left 
 
@@ -2036,6 +2037,7 @@ end
 
 original_mean_other_avg_frontal_left = nanmean(all_avg_frontal_left(2:end,:),1);
 original_avg_frontal_left = nanmean(all_avg_frontal_left(1,:),1);
+avg_frontal_left = nanmean(all_avg_frontal_left,1);
 
 %% plot for average
 
@@ -2142,6 +2144,11 @@ AM_prettyfig
 % legend({'learner', 'non-learners'})
 % AM_prettyfig
 
+%% STATS
+
+[p,tbl,stats] = anova1(all_avg_visual_left(:,1:10));
+
+[p,tbl,stats] = anova1(all_avg_frontal_left(:,1:10));
 
 %% - Reversal 
 
@@ -2344,6 +2351,22 @@ xlabel('Training day');
 ylim([-2*10^(-3) 6*10^(-3)]);
 AM_prettyfig
 
+%% STATS
+
+[p,tbl,stats] = anova1(all_avg_visual_right(2:end,1:10));
+
+[p,tbl,stats] = anova1(all_avg_frontal_right(2:end,1:10));
+
+% [p,tbl,stats] = anova1(all_avg_visual_right(1,1:10));
+
+
+learner_frontal_right_mdl = fitlm(1:10, all_avg_frontal_right(1,1:10));
+other_frontal_right_mdl = fitlm(1:10, reversal_mean_other_avg_frontal_right(1:10));
+
+learner_visual_right_mdl = fitlm(1:10, all_avg_visual_right(1,1:10));
+other_visual_right_mdl = fitlm(1:10, reversal_mean_other_avg_visual_right(1:10));
+
+
 %% - Post-training and last day of training
 
 % - visual left ROIs 
@@ -2467,6 +2490,23 @@ avg_all_post_frontal_left = nanmean(all_post_frontal_left_ROI, 2);
 std_post_frontal_left = std(all_post_frontal_left_ROI, 0, 2);
 sem_post_frontal_left =  std_post_frontal_left./sqrt(length(animals)-2);
 
+%% STATS
+
+% frontal left
+
+tmp_last_frontal = nanmean(this_frontal_left_avg_ROI(small_window_idx,:),1);
+tmp_post_frontal = permute(nanmean(frontal_left_avg_ROI(:,small_window_idx,3:end),2), [1, 3, 2]); % mouse is column!
+tmp_all_frontal = [tmp_last_frontal; tmp_post_frontal];
+
+[p,tbl,stats] = anova1(tmp_all_frontal');
+
+% visual left
+tmp_last_visual = nanmean(this_visual_left_avg_ROI(small_window_idx,:),1);
+tmp_post_visual = permute(nanmean(visual_left_avg_ROI(:,small_window_idx,3:end),2), [1, 3, 2]); % mouse is column!
+tmp_all_visual = [tmp_last_visual; tmp_post_visual];
+
+[p,tbl,stats] = anova1(tmp_all_visual');
+
 
 %% -- plot
 
@@ -2497,6 +2537,7 @@ xticklabels({'', 'last day', '', 'week 1', '', 'week 2', '', 'week 3', ''})
 AM_prettyfig
 
 %% plot for average
+
 
 %% - all mice
 % visual
@@ -2535,6 +2576,7 @@ ylabel('ROI fluorescence');
 xlabel('Training day');
 ylim([-1*10^(-3) 4*10^(-3)]);
 AM_prettyfig
+
 
 
 %% RT and Passive fluorescence ----------------------------------------------
@@ -3097,6 +3139,29 @@ ylabel('Percentage of RT in 100-200 ms')
 ylim([0 0.7])
 xlim([0 0.0035])
 AM_prettyfig
+
+%% STATS
+
+original_all_avg_visual_left = mean([original_avg_visual_left; original_mean_other_avg_visual_left]);
+original_all_RT = mean([original_RT; original_other_mean_RT]);
+
+original_all_avg_frontal_left = mean([original_avg_frontal_left; original_mean_other_avg_frontal_left]);
+original_all_RT = mean([original_RT; original_other_mean_RT]);
+
+% visual
+mdl_reversal_visual_RT = fitlm(reversal_avg_visual_right, reversal_RT);
+
+mdl_reversal_visual_other_RT = fitlm(reversal_mean_other_avg_visual_right, reversal_other_mean_RT);
+
+mdl_original_visual_RT = fitlm(original_all_avg_visual_left, original_all_RT);
+
+% frontal
+mdl_reversal_frontal_RT = fitlm(reversal_avg_frontal_right, reversal_RT);
+
+mdl_reversal_frontal_other_RT = fitlm(reversal_mean_other_avg_frontal_right, reversal_other_mean_RT);
+
+mdl_original_frontal_RT = fitlm(original_all_avg_frontal_left, original_all_RT);
+
 
 
 %% Average image with atlas

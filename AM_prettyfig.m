@@ -26,7 +26,7 @@ for curr_ax = 1:length(fig_ax)
         'TickLength',[0.015,0.015], ... % larger ticks
         'TickDir','out', ... % ticks outside plot
         'box','off', ... % no bounding box
-        'FontSize',14,'FontName','Arial'); % larger/presentation font
+        'FontSize',16,'FontName','Arial'); % larger/presentation font
     catch me
         continue
     end
